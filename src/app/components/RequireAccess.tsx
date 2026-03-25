@@ -21,13 +21,16 @@ export default function RequireAccess() {
 
   if (gateOn && unlocked) {
     return (
-      <div className="relative min-h-[100dvh]">
-        <div className="absolute top-3 right-3 z-[1] sm:top-4 sm:right-4">
+      <div className="flex min-h-[100dvh] flex-col">
+        <div className="min-h-0 flex-1">
+          <Outlet />
+        </div>
+        <footer className="mt-auto flex justify-center px-4 pb-8 pt-6">
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="text-slate-400 hover:text-white hover:bg-white/10 gap-1.5"
+            className="gap-1.5 bg-transparent text-slate-400 shadow-none hover:bg-transparent hover:text-white focus-visible:ring-0 dark:hover:bg-transparent"
             onClick={() => {
               clearAccessSession();
               navigate('/login', { replace: true });
@@ -36,8 +39,7 @@ export default function RequireAccess() {
             <LogOut className="size-4" aria-hidden />
             Sair
           </Button>
-        </div>
-        <Outlet />
+        </footer>
       </div>
     );
   }
