@@ -1,6 +1,5 @@
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { LogOut } from 'lucide-react';
-import { Button } from './ui/button';
 import {
   clearAccessSession,
   isAccessGateEnabled,
@@ -21,24 +20,22 @@ export default function RequireAccess() {
 
   if (gateOn && unlocked) {
     return (
-      <div className="flex min-h-[100dvh] flex-col">
+      <div className="flex min-h-[100dvh] flex-col bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
         <div className="min-h-0 flex-1">
           <Outlet />
         </div>
-        <footer className="mt-auto flex justify-center px-4 pb-8 pt-6">
-          <Button
+        <footer className="flex shrink-0 justify-center px-4 pb-8 pt-6">
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 bg-transparent text-slate-400 shadow-none hover:bg-transparent hover:text-white focus-visible:ring-0 dark:hover:bg-transparent"
+            className="inline-flex items-center justify-center gap-1.5 rounded-md border-0 bg-transparent px-3 py-2 text-sm font-medium text-slate-400 shadow-none transition-colors hover:bg-transparent hover:text-white focus-visible:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/45 active:bg-transparent"
             onClick={() => {
               clearAccessSession();
               navigate('/login', { replace: true });
             }}
           >
-            <LogOut className="size-4" aria-hidden />
+            <LogOut className="size-4 shrink-0" aria-hidden />
             Sair
-          </Button>
+          </button>
         </footer>
       </div>
     );
