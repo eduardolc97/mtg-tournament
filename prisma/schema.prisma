@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tournament {
+  id                              String   @id
+  name                            String
+  createdAt                       DateTime
+  players                         Json
+  rounds                          Json
+  leagueYear                      Int
+  leagueMonth                     Int
+  modality                        String   @default("weekly_cmd100")
+  doublesIncludeFourthSwissRound  Boolean?
+}
+
+model PresetPlayerName {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+}
