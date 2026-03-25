@@ -24,7 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { ArrowLeft, Crown, Loader2, Trophy } from 'lucide-react';
+import { ArrowLeft, Crown, Loader2 } from 'lucide-react';
+import PageHeaderBrand from './PageHeaderBrand';
 
 function parseQueryInt(
   params: URLSearchParams,
@@ -104,12 +105,11 @@ export default function MonthlyLeaguePage() {
           </Link>
         </Button>
 
-        <div className="flex items-center gap-3 mb-2">
-          <Trophy className="w-10 h-10 text-yellow-400 shrink-0" />
+        <PageHeaderBrand variant="league" className="mb-2">
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
             Liga mensal
           </h1>
-        </div>
+        </PageHeaderBrand>
         <p className="text-slate-400 text-sm mb-6 max-w-xl">
           Soma de pontos só dos campeonatos na modalidade{' '}
           <span className="text-slate-300">Liga CMD 100 semanal</span> (CMD em

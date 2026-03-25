@@ -28,9 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Trophy, UserPlus, X, Sparkles, ArrowLeft, Calendar, User } from 'lucide-react';
+import { UserPlus, X, Sparkles, ArrowLeft, Calendar, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchPresetPlayerNames } from '../lib/tournamentsApi';
+import PageHeaderBrand from './PageHeaderBrand';
 
 export default function CreateTournament() {
   const navigate = useNavigate();
@@ -235,12 +236,11 @@ export default function CreateTournament() {
             Voltar
           </Button>
           
-          <div className="flex items-center gap-3 mb-2">
-            <Trophy className="w-10 h-10 text-yellow-400" />
+          <PageHeaderBrand variant="create" className="mb-2">
             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
               Novo Campeonato
             </h1>
-          </div>
+          </PageHeaderBrand>
         </div>
 
         {/* Tournament Name */}

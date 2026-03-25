@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, Trophy, Users, Target, Loader2, Calendar } from 'lucide-react';
+import PageHeaderBrand from './PageHeaderBrand';
 import {
   normalizeTournamentModality,
   tournamentModalityLabelPt,
@@ -62,12 +63,11 @@ export default function TournamentView() {
             Voltar
           </Button>
 
-          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 flex-wrap">
-            <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-400 shrink-0 [@media(orientation:landscape)_and_(max-height:500px)]:w-7 [@media(orientation:landscape)_and_(max-height:500px)]:h-7" />
+          <PageHeaderBrand variant="tournament" className="mb-1 sm:mb-2">
             <h1 className="text-xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent [@media(orientation:landscape)_and_(max-height:500px)]:text-lg">
               {tournament.name}
             </h1>
-          </div>
+          </PageHeaderBrand>
 
           <div className="flex flex-wrap gap-3 text-slate-300 mt-2 sm:mt-4 text-xs sm:text-sm [@media(orientation:landscape)_and_(max-height:500px)]:mt-1">
             <div className="flex items-center gap-2">

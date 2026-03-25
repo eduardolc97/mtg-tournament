@@ -22,7 +22,7 @@ export default function RequireAccess() {
   if (gateOn && unlocked) {
     return (
       <div className="relative min-h-[100dvh]">
-        <div className="absolute top-3 right-3 z-[100] sm:top-4 sm:right-4">
+        <div className="absolute top-3 right-3 z-[1] sm:top-4 sm:right-4">
           <Button
             type="button"
             variant="ghost"

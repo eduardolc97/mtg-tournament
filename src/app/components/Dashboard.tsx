@@ -25,6 +25,7 @@ import {
 } from '../constants/tournamentModality';
 import { monthLabel } from '../utils/monthlyLeague';
 import type { Tournament } from '../types/tournament';
+import PageHeaderBrand from './PageHeaderBrand';
 
 function sortByCreatedDesc(a: Tournament, b: Tournament): number {
   return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -142,25 +143,25 @@ const MODALITY_SECTION_ORDER: {
   title: string;
   description: string;
 }[] = [
-  {
-    value: 'weekly_cmd100',
-    modality: 'weekly_cmd100',
-    title: 'Liga CMD 100 semanal',
-    description: 'Torneios que entram na classificação mensal da liga.',
-  },
-  {
-    value: 'doubles_cmd',
-    modality: 'doubles_cmd',
-    title: 'CMD em duplas',
-    description: 'Mesas 2×2 e ranking por dupla.',
-  },
-  {
-    value: 'cmd_open_table',
-    modality: 'cmd_open_table',
-    title: 'CMD mesão livre',
-    description: 'Mesmo formato da liga; rótulo de evento aberto.',
-  },
-];
+    {
+      value: 'weekly_cmd100',
+      modality: 'weekly_cmd100',
+      title: 'Liga CMD 100 semanal',
+      description: 'Torneios que entram na classificação mensal da liga.',
+    },
+    {
+      value: 'doubles_cmd',
+      modality: 'doubles_cmd',
+      title: 'CMD em duplas',
+      description: 'Mesas 2×2 e ranking por dupla.',
+    },
+    {
+      value: 'cmd_open_table',
+      modality: 'cmd_open_table',
+      title: 'CMD mesão livre',
+      description: 'Mesmo formato da liga; rótulo de evento aberto.',
+    },
+  ];
 
 export default function Dashboard() {
   const { tournaments, loading } = useTournaments();
@@ -174,12 +175,15 @@ export default function Dashboard() {
     <div className="min-h-[100dvh] bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
       <div className="container mx-auto px-3 py-6 max-w-6xl sm:px-4 sm:py-8 [@media(orientation:landscape)_and_(max-height:500px)]:py-4 [@media(orientation:landscape)_and_(max-height:500px)]:px-3">
         <div className="text-center mb-8 sm:mb-12 [@media(orientation:landscape)_and_(max-height:500px)]:mb-4">
-          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4 [@media(orientation:landscape)_and_(max-height:500px)]:mb-2">
-            <Trophy className="w-9 h-9 sm:w-12 sm:h-12 text-yellow-400 shrink-0 [@media(orientation:landscape)_and_(max-height:500px)]:w-8 [@media(orientation:landscape)_and_(max-height:500px)]:h-8" />
+          <PageHeaderBrand
+            variant="dashboard"
+            justify="center"
+            className="mb-3 sm:mb-4 [@media(orientation:landscape)_and_(max-height:500px)]:mb-2"
+          >
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent [@media(orientation:landscape)_and_(max-height:500px)]:text-xl">
-              Campeonato Commander
+              Torneios 2 Irmãos
             </h1>
-          </div>
+          </PageHeaderBrand>
           <p className="text-slate-300 text-sm sm:text-lg [@media(orientation:landscape)_and_(max-height:500px)]:text-xs">
             Gerencie torneios de Magic: The Gathering - EDH
           </p>
@@ -213,7 +217,7 @@ export default function Dashboard() {
             <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400 shrink-0" />
             Campeonatos
           </h2>
-          
+
           {loading ? (
             <Card className="bg-slate-900/50 border-slate-700 backdrop-blur">
               <CardContent className="py-12 flex flex-col items-center justify-center gap-3 text-slate-400">

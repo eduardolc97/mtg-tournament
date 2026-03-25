@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import React, { useState, type FormEvent } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router';
 import { KeyRound } from 'lucide-react';
 import { Button } from './ui/button';
@@ -53,9 +53,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-xl text-white">Acesso</CardTitle>
           <CardDescription className="text-slate-400">
-            Informe o token configurado no ambiente ({' '}
-            <code className="text-purple-300/90 text-xs">VITE_APP_ACCESS_TOKEN</code>
-            ).
+            Informe a senha de acesso.
           </CardDescription>
         </CardHeader>
         <CardContent>
