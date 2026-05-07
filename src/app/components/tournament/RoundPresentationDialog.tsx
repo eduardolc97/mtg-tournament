@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
+import RoundCountdownTimer from './RoundCountdownTimer';
 
 interface RoundPresentationDialogProps {
   open: boolean;
@@ -47,13 +48,15 @@ export default function RoundPresentationDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <RoundCountdownTimer variant="fullscreen" />
+
         <div
-          className="grid min-h-0 flex-1 auto-rows-min content-start overflow-y-auto text-[clamp(0.875rem,0.48rem+1.2vmin,1.1875rem)] [gap:clamp(0.375rem,0.2rem+1vmin,1rem)] [grid-template-columns:repeat(auto-fill,minmax(clamp(12rem,4.5rem+14vmin,22rem),1fr))]"
+          className="grid min-h-0 w-full flex-1 auto-rows-min justify-items-stretch overflow-y-auto text-[clamp(0.875rem,0.48rem+1.2vmin,1.1875rem)] [gap:clamp(0.75rem,0.35rem+1.75vmin,1.75rem)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,clamp(17rem,12vmin+12rem,42rem)),1fr))]"
         >
           {round.tables.map((table, tableIndex) => (
             <div
               key={table.id}
-              className="flex min-h-0 flex-col rounded-xl border border-slate-700/80 bg-slate-900/60 [padding:clamp(0.45rem,0.25rem+1vmin,1rem)]"
+              className="flex min-h-0 w-full min-w-0 flex-col rounded-xl border border-slate-700/80 bg-slate-900/60 [padding:clamp(0.65rem,0.35rem+1.25vmin,1.35rem)]"
             >
               <h3 className="mb-[clamp(0.35rem,0.2rem+0.75vmin,0.65rem)] text-center font-bold text-purple-300 text-[1.35em] leading-tight">
                 Mesa {tableIndex + 1}

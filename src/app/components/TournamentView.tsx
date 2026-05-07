@@ -14,6 +14,7 @@ import PlayersTab from './tournament/PlayersTab';
 import RoundsTab from './tournament/RoundsTab';
 import RankingTab from './tournament/RankingTab';
 import CurrentRoundIndicator from './tournament/CurrentRoundIndicator';
+import RoundCountdownTimer from './tournament/RoundCountdownTimer';
 
 export default function TournamentView() {
   const { id } = useParams<{ id: string }>();
@@ -100,6 +101,7 @@ export default function TournamentView() {
         {tournament.rounds.length > 0 && (
           <CurrentRoundIndicator tournament={tournament} />
         )}
+        <RoundCountdownTimer />
 
         {/* Tabs */}
         <Tabs defaultValue="rounds" className="w-full min-h-0">
