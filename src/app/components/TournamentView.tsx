@@ -24,6 +24,7 @@ export default function TournamentView() {
     loading,
     addPlayerToTournament,
     removePlayerFromTournament,
+    generateTournamentRounds,
   } = useTournaments();
 
   const tournament = getTournamentById(id!);
@@ -144,7 +145,12 @@ export default function TournamentView() {
           </TabsContent>
 
           <TabsContent value="rounds">
-            <RoundsTab tournament={tournament} />
+            <RoundsTab
+              tournament={tournament}
+              onGenerateRounds={
+                modality === 'doubles_cmd' ? undefined : generateTournamentRounds
+              }
+            />
           </TabsContent>
 
           <TabsContent value="ranking">

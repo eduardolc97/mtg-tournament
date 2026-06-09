@@ -107,7 +107,11 @@ export default function PlayersTab({
               onAddFromProfile={handleAddFromProfile}
               disabled={!rosterGuard.ok}
               disabledReason={rosterGuard.ok ? undefined : rosterGuard.reason}
-              description="Adicione ou remova jogadores entre rodadas. A rodada atual e as futuras serão remontadas automaticamente."
+              description={
+                tournament.rounds.length === 0
+                  ? 'Monte o elenco aqui. Gere as rodadas na aba Rodadas quando estiver pronto.'
+                  : 'Adicione ou remova jogadores entre rodadas. As mesas são ajustadas automaticamente (máximo 4 por mesa).'
+              }
             />
           </CardContent>
         </Card>

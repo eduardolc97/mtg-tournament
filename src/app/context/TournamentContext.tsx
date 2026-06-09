@@ -18,6 +18,7 @@ import { createEntryId } from '../utils/lateJoinPlayer';
 import {
   addPlayerToTournament as addPlayerToTournamentApi,
   fetchTournaments,
+  generateTournamentRounds as generateTournamentRoundsApi,
   postTournament,
   putTournament,
   removePlayerFromTournament as removePlayerFromTournamentApi,
@@ -36,6 +37,7 @@ interface TournamentContextType {
     tournamentId: string,
     entryId: string
   ) => Promise<void>;
+  generateTournamentRounds: (tournamentId: string) => Promise<void>;
   getTournamentById: (id: string) => Tournament | undefined;
   updateTableResults: (
     tournamentId: string,
@@ -223,6 +225,17 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const generateTournamentRounds = async (tournamentId: string) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    const saved = await generateTournamentRoundsApi(current);
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
   return (
     <TournamentContext.Provider
       value={{
@@ -232,6 +245,7 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
         updateTournament,
         addPlayerToTournament,
         removePlayerFromTournament,
+        generateTournamentRounds,
         getTournamentById,
         updateTableResults,
       }}
