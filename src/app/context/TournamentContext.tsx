@@ -5,7 +5,8 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { Tournament, TableResult } from '../types/tournament';
+import { Player, Tournament, TableResult } from '../types/tournament';
+import type { PlayerProfile } from '../types/player';
 import { normalizeTournamentModality } from '../constants/tournamentModality';
 import { expectedSwissRoundsForTournament } from '../utils/tournamentSwiss';
 import {
@@ -13,10 +14,13 @@ import {
   buildFinalRoundForTournament,
   isRoundFullyScored,
 } from '../utils/finalRound';
+import { createEntryId } from '../utils/lateJoinPlayer';
 import {
+  addPlayerToTournament as addPlayerToTournamentApi,
   fetchTournaments,
   postTournament,
   putTournament,
+  removePlayerFromTournament as removePlayerFromTournamentApi,
 } from '../lib/tournamentsApi';
 
 interface TournamentContextType {
@@ -24,6 +28,14 @@ interface TournamentContextType {
   loading: boolean;
   addTournament: (tournament: Tournament) => Promise<void>;
   updateTournament: (id: string, tournament: Tournament) => Promise<void>;
+  addPlayerToTournament: (
+    tournamentId: string,
+    profile: PlayerProfile
+  ) => Promise<void>;
+  removePlayerFromTournament: (
+    tournamentId: string,
+    entryId: string
+  ) => Promise<void>;
   getTournamentById: (id: string) => Tournament | undefined;
   updateTableResults: (
     tournamentId: string,
@@ -173,6 +185,44 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const addPlayerToTournament = async (
+    tournamentId: string,
+    profile: PlayerProfile
+  ) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    if (current.players.some((p) => p.playerId === profile.id)) {
+      throw new Error('Jogador já adicionado');
+    }
+    const entry: Player = {
+      id: createEntryId(),
+      playerId: profile.id,
+      name: profile.nickname,
+      fullName: profile.fullName,
+      companionNick: profile.companionNick,
+    };
+    const saved = await addPlayerToTournamentApi(current, entry);
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
+  const removePlayerFromTournament = async (
+    tournamentId: string,
+    entryId: string
+  ) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    const saved = await removePlayerFromTournamentApi(current, entryId);
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
   return (
     <TournamentContext.Provider
       value={{
@@ -180,6 +230,8 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
         loading,
         addTournament,
         updateTournament,
+        addPlayerToTournament,
+        removePlayerFromTournament,
         getTournamentById,
         updateTableResults,
       }}

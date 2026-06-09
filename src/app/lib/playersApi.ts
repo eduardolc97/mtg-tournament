@@ -1,5 +1,5 @@
 import type { PlayerProfile, UpsertPlayerInput } from '../types/player';
-import { nicknameKey } from '../types/player';
+import { matchesPlayerSearch, nicknameKey } from '../types/player';
 import { supabase } from './supabaseClient';
 
 type PlayerRow = {
@@ -80,13 +80,11 @@ export async function searchPlayersByNickname(
   query: string
 ): Promise<PlayerProfile[]> {
   const all = await fetchPlayers();
-  const q = query.trim().toLowerCase();
+  const q = query.trim();
   if (!q) {
     return all.slice(0, 50);
   }
-  return all
-    .filter((p) => p.nickname.toLowerCase().includes(q))
-    .slice(0, 50);
+  return all.filter((p) => matchesPlayerSearch(p, q)).slice(0, 50);
 }
 
 export async function upsertPlayer(

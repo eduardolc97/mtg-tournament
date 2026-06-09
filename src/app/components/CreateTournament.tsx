@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTournaments } from '../context/TournamentContext';
 import { Player, Tournament } from '../types/tournament';
 import type { PlayerProfile } from '../types/player';
-import { nicknameKey } from '../types/player';
 import {
   DEFAULT_TOURNAMENT_MODALITY,
   type TournamentModality,
@@ -13,12 +12,13 @@ import {
   generateDoublesSwissRounds,
   isValidDoublesPlayerCount,
 } from '../utils/doublesRoundGenerator';
+import { createEntryId } from '../utils/lateJoinPlayer';
 import {
   generateSwissRoundsOneAndTwo,
   isValidTournamentPlayerCount,
 } from '../utils/roundGenerator';
-import { fetchPlayers, upsertPlayer } from '../lib/playersApi';
-import PlayerProfileDialog from './PlayerProfileDialog';
+import PlayerPickerSection from './PlayerPickerSection';
+import { PlayerProfileSummary } from './PlayerProfileSummary';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Input } from './ui/input';
@@ -30,135 +30,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { UserPlus, X, Sparkles, ArrowLeft, Calendar, User } from 'lucide-react';
+import { UserPlus, X, Sparkles, ArrowLeft, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeaderBrand from './PageHeaderBrand';
-
-function createEntryId(): string {
-  return `entry-${Date.now()}-${Math.random()}`;
-}
-
-function matchesPlayerSearch(
-  profile: PlayerProfile,
-  query: string
-): boolean {
-  const q = query.toLowerCase();
-  return (
-    profile.nickname.toLowerCase().includes(q) ||
-    (profile.fullName?.toLowerCase().includes(q) ?? false) ||
-    (profile.companionNick?.toLowerCase().includes(q) ?? false)
-  );
-}
-
-function PlayerProfileSummary({
-  nickname,
-  fullName,
-  companionNick,
-  compact = false,
-}: {
-  nickname: string;
-  fullName?: string | null;
-  companionNick?: string | null;
-  compact?: boolean;
-}) {
-  return (
-    <div className={compact ? 'min-w-0 space-y-0.5' : 'pl-6 space-y-0.5'}>
-      {!compact ? (
-        <span className="flex items-center gap-2 text-sm text-white">
-          <User className="h-4 w-4 shrink-0 text-slate-400" />
-          {nickname}
-        </span>
-      ) : (
-        <p className="text-white truncate">{nickname}</p>
-      )}
-      <p
-        className={`truncate text-xs ${
-          fullName ? 'text-slate-400' : 'text-slate-600 italic'
-        }`}
-      >
-        {fullName ?? 'Nome completo não cadastrado'}
-      </p>
-      {companionNick ? (
-        <p className="text-xs text-purple-400/90 truncate">
-          Companion: {companionNick}
-        </p>
-      ) : (
-        !compact && (
-          <p className="text-xs text-slate-600 truncate">Companion: —</p>
-        )
-      )}
-    </div>
-  );
-}
 
 export default function CreateTournament() {
   const navigate = useNavigate();
   const { addTournament } = useTournaments();
 
-  const [registry, setRegistry] = useState<PlayerProfile[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogSaving, setDialogSaving] = useState(false);
-  const [pendingNickname, setPendingNickname] = useState('');
-  const [pendingExisting, setPendingExisting] = useState<PlayerProfile | null>(
-    null
-  );
-  const [requireFullName, setRequireFullName] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchPlayers()
-      .then((players) => {
-        if (!cancelled) {
-          setRegistry(players);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setRegistry([]);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const [tournamentName, setTournamentName] = useState('');
-  const [playerName, setPlayerName] = useState('');
   const [players, setPlayers] = useState<Player[]>([]);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const suggestContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!suggestOpen) {
-      return;
-    }
-    const onDocMouseDown = (e: MouseEvent) => {
-      const el = suggestContainerRef.current;
-      if (el && !el.contains(e.target as Node)) {
-        setSuggestOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', onDocMouseDown);
-    return () => document.removeEventListener('mousedown', onDocMouseDown);
-  }, [suggestOpen]);
 
   const excludedPlayerIds = useMemo(
     () => new Set(players.map((p) => p.playerId)),
     [players]
   );
-
-  const availableRegistryCount = useMemo(() => {
-    return registry.filter((p) => !excludedPlayerIds.has(p.id)).length;
-  }, [registry, excludedPlayerIds]);
-
-  const suggestions = useMemo(() => {
-    const available = registry.filter((p) => !excludedPlayerIds.has(p.id));
-    const q = playerName.trim().toLowerCase();
-    if (!q) {
-      return available.slice(0, 50);
-    }
-    return available.filter((p) => matchesPlayerSearch(p, q)).slice(0, 50);
-  }, [registry, excludedPlayerIds, playerName]);
 
   const now = new Date();
   const [leagueMonth, setLeagueMonth] = useState(now.getMonth() + 1);
@@ -175,21 +61,9 @@ export default function CreateTournament() {
       ? isValidDoublesPlayerCount(players.length)
       : isValidTournamentPlayerCount(players.length);
 
-  const openPlayerDialog = (
-    nickname: string,
-    existing: PlayerProfile | null,
-    forceFullName: boolean
-  ) => {
-    setPendingNickname(nickname);
-    setPendingExisting(existing);
-    setRequireFullName(forceFullName);
-    setDialogOpen(true);
-  };
-
-  const addPlayerFromProfile = (profile: PlayerProfile) => {
+  const addPlayerFromProfile = async (profile: PlayerProfile) => {
     if (players.some((p) => p.playerId === profile.id)) {
-      toast.error('Jogador já adicionado');
-      return;
+      throw new Error('Jogador já adicionado');
     }
 
     const entry: Player = {
@@ -201,73 +75,7 @@ export default function CreateTournament() {
     };
 
     setPlayers((prev) => [...prev, entry]);
-    setPlayerName('');
-    setSuggestOpen(false);
     toast.success(`${entry.name} adicionado!`);
-  };
-
-  const beginAddPlayer = (rawNickname: string) => {
-    const trimmed = rawNickname.trim();
-    if (!trimmed) {
-      toast.error('Digite o apelido do jogador');
-      return;
-    }
-
-    const key = nicknameKey(trimmed);
-    const existing =
-      registry.find((p) => nicknameKey(p.nickname) === key) ?? null;
-
-    if (existing) {
-      if (!existing.fullName?.trim()) {
-        openPlayerDialog(trimmed, existing, true);
-        return;
-      }
-      openPlayerDialog(trimmed, existing, false);
-      return;
-    }
-
-    openPlayerDialog(trimmed, null, true);
-  };
-
-  const handleDialogConfirm = async (data: {
-    nickname: string;
-    fullName: string;
-    companionNick: string;
-  }) => {
-    setDialogSaving(true);
-    try {
-      const profile = await upsertPlayer({
-        nickname: data.nickname,
-        fullName: data.fullName,
-        companionNick: data.companionNick || null,
-      });
-
-      setRegistry((prev) => {
-        const key = nicknameKey(profile.nickname);
-        const without = prev.filter((p) => nicknameKey(p.nickname) !== key);
-        return [...without, profile].sort((a, b) =>
-          a.nickname.localeCompare(b.nickname, 'pt-BR')
-        );
-      });
-
-      addPlayerFromProfile(profile);
-      setRequireFullName(false);
-      setDialogOpen(false);
-    } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : 'Não foi possível salvar o jogador.'
-      );
-    } finally {
-      setDialogSaving(false);
-    }
-  };
-
-  const handleAddPlayer = () => {
-    beginAddPlayer(playerName);
-  };
-
-  const applySuggestedPlayer = (profile: PlayerProfile) => {
-    beginAddPlayer(profile.nickname);
   };
 
   const handleRemovePlayer = (entryId: string) => {
@@ -343,16 +151,6 @@ export default function CreateTournament() {
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
-      <PlayerProfileDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initialNickname={pendingNickname}
-        existing={pendingExisting}
-        requireFullName={requireFullName}
-        onConfirm={handleDialogConfirm}
-        saving={dialogSaving}
-      />
-
       <div className="container mx-auto px-3 py-6 max-w-4xl sm:px-4 sm:py-8 [@media(orientation:landscape)_and_(max-height:500px)]:py-4">
         <div className="mb-6 sm:mb-8 [@media(orientation:landscape)_and_(max-height:500px)]:mb-4">
           <Button
@@ -562,87 +360,11 @@ export default function CreateTournament() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-400 mb-3">
-              Ao digitar, aparecem jogadores já cadastrados — clique para
-              adicionar. Nomes novos abrem o cadastro com nome completo
-              obrigatório.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 mb-6">
-              <div
-                ref={suggestContainerRef}
-                className="relative flex-1 min-w-0 w-full"
-              >
-                <Input
-                  placeholder="Apelido do jogador"
-                  value={playerName}
-                  onChange={(e) => {
-                    setPlayerName(e.target.value);
-                    if (registry.length > 0) {
-                      setSuggestOpen(true);
-                    }
-                  }}
-                  onFocus={() => {
-                    if (registry.length > 0) {
-                      setSuggestOpen(true);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddPlayer();
-                    }
-                    if (e.key === 'Escape') {
-                      setSuggestOpen(false);
-                    }
-                  }}
-                  autoComplete="off"
-                  className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
-                />
-                {suggestOpen && registry.length > 0 && (
-                  <div
-                    className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-md border border-slate-600 bg-slate-900 py-1 shadow-xl"
-                    role="listbox"
-                    aria-label="Jogadores cadastrados"
-                  >
-                    <p className="px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Já cadastrados
-                    </p>
-                    {suggestions.length > 0 ? (
-                      suggestions.map((profile) => (
-                        <button
-                          key={profile.id}
-                          type="button"
-                          role="option"
-                          className="flex w-full flex-col items-start gap-1 px-3 py-2.5 text-left hover:bg-purple-600/35"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            applySuggestedPlayer(profile);
-                          }}
-                        >
-                          <PlayerProfileSummary
-                            nickname={profile.nickname}
-                            fullName={profile.fullName}
-                            companionNick={profile.companionNick}
-                          />
-                        </button>
-                      ))
-                    ) : (
-                      <p className="px-3 py-4 text-center text-sm text-slate-500">
-                        {availableRegistryCount === 0
-                          ? 'Todos os jogadores cadastrados já estão nesta lista. Digite um apelido novo.'
-                          : 'Nenhum jogador combina com a busca. Use o texto digitado como apelido novo.'}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-              <Button
-                onClick={handleAddPlayer}
-                className="bg-blue-600 hover:bg-blue-700 shrink-0"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Adicionar
-              </Button>
+            <div className="mb-6">
+              <PlayerPickerSection
+                excludedPlayerIds={excludedPlayerIds}
+                onAddFromProfile={addPlayerFromProfile}
+              />
             </div>
 
             {players.length > 0 ? (
