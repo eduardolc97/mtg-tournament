@@ -1,20 +1,10 @@
-import type { Player, Round, Table, Tournament } from '../types/tournament';
+import type { Round, Table, Tournament } from '../types/tournament';
 import { expectedSwissRoundsForTournament } from './tournamentSwiss';
 import {
-  buildDoublesTablesForTeams,
   getDoublesTeamsFromPlayers,
   type DoublesTeam,
 } from './doublesRoundGenerator';
-import { buildTablesForRound, pairKey } from './roundGenerator';
-
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
+import { buildScoreBalancedTables } from './roundGenerator';
 
 export function aggregatePointsThroughRound(
   tournament: Tournament,
@@ -40,59 +30,59 @@ export function aggregatePointsThroughRound(
   return map;
 }
 
-function pickTopTwoTeamsWithTieRandom(
-  teamsSorted: { team: DoublesTeam; pts: number }[]
+function rankDoublesTeams(
+  teams: DoublesTeam[],
+  points: Map<string, number>
 ): DoublesTeam[] {
-  const selected: DoublesTeam[] = [];
-  let i = 0;
-  while (selected.length < 2 && i < teamsSorted.length) {
-    const score = teamsSorted[i].pts;
-    const group: DoublesTeam[] = [];
-    while (
-      i < teamsSorted.length &&
-      teamsSorted[i].pts === score
-    ) {
-      group.push(teamsSorted[i].team);
-      i++;
+  return [...teams].sort((x, y) => {
+    const pxa = points.get(x.a.id) ?? 0;
+    const pxb = points.get(x.b.id) ?? 0;
+    const pya = points.get(y.a.id) ?? 0;
+    const pyb = points.get(y.b.id) ?? 0;
+    const ptsX = pxa === pxb ? pxa : Math.round((pxa + pxb) / 2);
+    const ptsY = pya === pyb ? pya : Math.round((pya + pyb) / 2);
+    if (ptsY !== ptsX) {
+      return ptsY - ptsX;
     }
-    if (selected.length + group.length <= 2) {
-      selected.push(...group);
-    } else {
-      const need = 2 - selected.length;
-      const shuffled = shuffleArray([...group]);
-      selected.push(...shuffled.slice(0, need));
-      break;
-    }
-  }
-  return selected;
+    const nx = `${x.a.name} / ${x.b.name}`;
+    const ny = `${y.a.name} / ${y.b.name}`;
+    return nx.localeCompare(ny, 'pt-BR');
+  });
 }
 
-function pickTopFourWithTieRandom(
-  sortedByPoints: Player[],
-  points: Map<string, number>
-): Player[] {
-  const selected: Player[] = [];
-  let i = 0;
-  while (selected.length < 4 && i < sortedByPoints.length) {
-    const score = points.get(sortedByPoints[i].id) ?? 0;
-    const group: Player[] = [];
-    while (
-      i < sortedByPoints.length &&
-      (points.get(sortedByPoints[i].id) ?? 0) === score
-    ) {
-      group.push(sortedByPoints[i]);
-      i++;
-    }
-    if (selected.length + group.length <= 4) {
-      selected.push(...group);
-    } else {
-      const need = 4 - selected.length;
-      const shuffled = shuffleArray([...group]);
-      selected.push(...shuffled.slice(0, need));
-      break;
-    }
+function buildScoreBalancedDoublesTables(
+  teams: DoublesTeam[],
+  points: Map<string, number>,
+  roundNumber: number,
+  startingTableNumber: number,
+  leadersTableFlags: { isFinalTable: boolean; isLeadersTable: boolean }
+): Table[] {
+  const ranked = rankDoublesTeams(teams, points);
+  const tables: Table[] = [];
+  let tableNumber = startingTableNumber;
+
+  for (let i = 0; i < ranked.length; i += 2) {
+    const t1 = ranked[i];
+    const t2 = ranked[i + 1];
+    const isFirst = i === 0;
+    const players = t2
+      ? [t1.a, t1.b, t2.a, t2.b]
+      : [t1.a, t1.b];
+
+    tables.push({
+      id: `round-${roundNumber}-table-${tableNumber}`,
+      players,
+      ...(isFirst && leadersTableFlags.isFinalTable
+        ? { isFinalTable: true }
+        : {}),
+      ...(isFirst && leadersTableFlags.isLeadersTable
+        ? { isLeadersTable: true }
+        : {}),
+    });
+    tableNumber++;
   }
-  return selected;
+
+  return tables;
 }
 
 function buildDoublesLeadersAndSideTables(
@@ -106,64 +96,13 @@ function buildDoublesLeadersAndSideTables(
     afterSwissRoundInclusive
   );
   const teams = getDoublesTeamsFromPlayers(tournament.players);
-  const ranked = teams
-    .map((team) => {
-      const pa = points.get(team.a.id) ?? 0;
-      const pb = points.get(team.b.id) ?? 0;
-      const pts = pa === pb ? pa : Math.round((pa + pb) / 2);
-      return { team, pts };
-    })
-    .sort((x, y) => {
-      if (y.pts !== x.pts) {
-        return y.pts - x.pts;
-      }
-      const nx = `${x.team.a.name} / ${x.team.b.name}`;
-      const ny = `${y.team.a.name} / ${y.team.b.name}`;
-      return nx.localeCompare(ny, 'pt-BR');
-    });
-
-  const finalists = pickTopTwoTeamsWithTieRandom(ranked);
-  const previousRounds = tournament.rounds;
-
-  const finalistTeamKeys = new Set(
-    finalists.map((t) => pairKey(t.a.id, t.b.id))
+  return buildScoreBalancedDoublesTables(
+    teams,
+    points,
+    outputRoundNumber,
+    1,
+    leadersTableFlags
   );
-  const restTeams = teams.filter(
-    (t) => !finalistTeamKeys.has(pairKey(t.a.id, t.b.id))
-  );
-
-  const tables: Table[] = [];
-
-  if (finalists.length >= 2) {
-    const [f1, f2] = finalists;
-    tables.push({
-      id: `round-${outputRoundNumber}-table-1`,
-      players: [f1.a, f1.b, f2.a, f2.b],
-      isFinalTable: leadersTableFlags.isFinalTable,
-      isLeadersTable: leadersTableFlags.isLeadersTable,
-    });
-  } else if (finalists.length === 1) {
-    const t = finalists[0];
-    tables.push({
-      id: `round-${outputRoundNumber}-table-1`,
-      players: [t.a, t.b],
-      isFinalTable: leadersTableFlags.isFinalTable,
-      isLeadersTable: leadersTableFlags.isLeadersTable,
-    });
-  }
-
-  if (restTeams.length > 0) {
-    const startNum = tables.length + 1;
-    const side = buildDoublesTablesForTeams(
-      restTeams,
-      outputRoundNumber,
-      previousRounds,
-      startNum
-    );
-    tables.push(...side);
-  }
-
-  return tables;
 }
 
 export function buildDoublesLastSwissRound(
@@ -193,47 +132,16 @@ export function buildFinalRoundForTournament(tournament: Tournament): Round {
 
 export function buildRoundThree(tournament: Tournament): Round {
   const swiss = expectedSwissRoundsForTournament(tournament);
-  const previousRounds = tournament.rounds;
   const points = aggregatePointsThroughRound(tournament, swiss);
-  const sorted = [...tournament.players].sort((a, b) => {
-    const pa = points.get(a.id) ?? 0;
-    const pb = points.get(b.id) ?? 0;
-    if (pb !== pa) {
-      return pb - pa;
-    }
-    return a.name.localeCompare(b.name, 'pt-BR');
-  });
-
-  const finalists = pickTopFourWithTieRandom(sorted, points);
-  const finalistIds = new Set(finalists.map((p) => p.id));
-  const rest = tournament.players.filter((p) => !finalistIds.has(p.id));
   const finalRoundNumber = swiss + 1;
 
-  const tables: Table[] = [];
-
-  tables.push({
-    id: `round-${finalRoundNumber}-table-1`,
-    players: finalists,
-    isFinalTable: true,
-  });
-
-  if (rest.length >= 3) {
-    tables.push(
-      ...buildTablesForRound(rest, finalRoundNumber, 2, previousRounds)
-    );
-  } else if (rest.length === 2) {
-    tables.push({
-      id: `round-${finalRoundNumber}-table-2`,
-      players: [...rest],
-      isFinalTable: false,
-    });
-  } else if (rest.length === 1) {
-    tables.push({
-      id: `round-${finalRoundNumber}-table-2`,
-      players: [rest[0]],
-      isFinalTable: false,
-    });
-  }
+  const tables = buildScoreBalancedTables(
+    tournament.players,
+    points,
+    finalRoundNumber,
+    1,
+    { isFinalTable: true }
+  );
 
   return {
     id: `round-${finalRoundNumber}`,

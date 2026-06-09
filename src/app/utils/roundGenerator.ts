@@ -256,6 +256,62 @@ export function buildFlexibleTablesForRound(
   );
 }
 
+export function sortPlayersByPoints(
+  players: Player[],
+  points: Map<string, number>
+): Player[] {
+  return [...players].sort((a, b) => {
+    const pa = points.get(a.id) ?? 0;
+    const pb = points.get(b.id) ?? 0;
+    if (pb !== pa) {
+      return pb - pa;
+    }
+    return a.name.localeCompare(b.name, 'pt-BR');
+  });
+}
+
+function resolveTableSizesForCount(playerCount: number): number[] {
+  try {
+    return computeTableSizes(playerCount);
+  } catch {
+    return computeFlexibleTableSizes(playerCount);
+  }
+}
+
+export function buildScoreBalancedTables(
+  players: Player[],
+  points: Map<string, number>,
+  roundNumber: number,
+  startingTableNumber: number,
+  firstTableFlags?: { isFinalTable?: boolean; isLeadersTable?: boolean }
+): Table[] {
+  const sorted = sortPlayersByPoints(players, points);
+  const sizes = resolveTableSizesForCount(players.length);
+  const tables: Table[] = [];
+  let idx = 0;
+  let tableNumber = startingTableNumber;
+
+  for (let i = 0; i < sizes.length; i++) {
+    const size = sizes[i];
+    const slice = sorted.slice(idx, idx + size);
+    idx += size;
+    const isFirst = i === 0;
+    tables.push({
+      id: `round-${roundNumber}-table-${tableNumber}`,
+      players: slice,
+      ...(isFirst && firstTableFlags?.isFinalTable
+        ? { isFinalTable: true }
+        : {}),
+      ...(isFirst && firstTableFlags?.isLeadersTable
+        ? { isLeadersTable: true }
+        : {}),
+    });
+    tableNumber++;
+  }
+
+  return tables;
+}
+
 function generateRoundWithPairing(
   players: Player[],
   roundNumber: number,
