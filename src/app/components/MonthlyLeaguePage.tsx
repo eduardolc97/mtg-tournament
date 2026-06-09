@@ -5,6 +5,7 @@ import { LEAGUE_MONTHS_PT, leagueYearOptions } from '../constants/leaguePeriod';
 import { countsTowardMonthlyLeague } from '../constants/tournamentModality';
 import {
   aggregateMonthlyLeague,
+  formatMonthlyLeagueRankingMessage,
   monthLabel,
 } from '../utils/monthlyLeague';
 import { Button } from './ui/button';
@@ -24,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { ArrowLeft, Crown, Loader2, Maximize2 } from 'lucide-react';
+import { ArrowLeft, Copy, Crown, Loader2, Maximize2 } from 'lucide-react';
+import { toast } from 'sonner';
 import PageHeaderBrand from './PageHeaderBrand';
 import MonthlyLeaguePresentationDialog from './MonthlyLeaguePresentationDialog';
 
@@ -91,6 +93,16 @@ export default function MonthlyLeaguePage() {
 
   const setPeriod = (y: number, m: number) => {
     setSearchParams({ year: String(y), month: String(m) });
+  };
+
+  const handleCopyRanking = async () => {
+    const message = formatMonthlyLeagueRankingMessage(rows, year, month);
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success('Ranking copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o ranking.');
+    }
   };
 
   return (
@@ -231,16 +243,28 @@ export default function MonthlyLeaguePage() {
                   </span>
                 </CardTitle>
                 {rows.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
-                    onClick={() => setPresentationOpen(true)}
-                  >
-                    <Maximize2 className="mr-2 h-4 w-4" />
-                    Modo apresentação
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
+                      onClick={handleCopyRanking}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar ranking
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
+                      onClick={() => setPresentationOpen(true)}
+                    >
+                      <Maximize2 className="mr-2 h-4 w-4" />
+                      Modo apresentação
+                    </Button>
+                  </>
                 )}
               </div>
             </CardHeader>

@@ -152,3 +152,58 @@ export function monthLabel(year: number, month: number): string {
     year: 'numeric',
   });
 }
+
+export function monthLabelUppercase(year: number, month: number): string {
+  const monthName = new Date(year, month - 1, 1)
+    .toLocaleDateString('pt-BR', { month: 'long' })
+    .toUpperCase();
+  return `${monthName} ${year}`;
+}
+
+const RANKING_COPY_SEPARATOR = '━━━━━━━━━━━━━━━━';
+
+const PODIUM_MEDALS = ['🥇', '🥈', '🥉'] as const;
+
+export function formatMonthlyLeagueRankingMessage(
+  rows: MonthlyLeagueRow[],
+  year: number,
+  month: number
+): string {
+  const ranked = rows.filter((row) => row.totalPointsInMonth > 0);
+  if (ranked.length === 0) {
+    return `🏆 RANKING GERAL — ${monthLabelUppercase(year, month)}\n\nNenhum resultado registrado ainda.`;
+  }
+
+  const lines: string[] = [
+    `🏆 RANKING GERAL — ${monthLabelUppercase(year, month)}`,
+    '',
+  ];
+
+  const podiumCount = Math.min(3, ranked.length);
+  for (let i = 0; i < podiumCount; i++) {
+    const row = ranked[i];
+    lines.push(`${PODIUM_MEDALS[i]} ${i + 1}º Lugar`);
+    lines.push(`${row.displayName} — ${row.totalPointsInMonth} pts`);
+    lines.push('');
+  }
+
+  if (ranked.length > 3) {
+    lines.push(RANKING_COPY_SEPARATOR);
+    lines.push('TOP 10');
+    const topTenEnd = Math.min(10, ranked.length);
+    for (let i = 3; i < topTenEnd; i++) {
+      const row = ranked[i];
+      lines.push(`${i + 1}° ${row.displayName} — ${row.totalPointsInMonth} pts`);
+    }
+  }
+
+  if (ranked.length > 10) {
+    lines.push(RANKING_COPY_SEPARATOR);
+    for (let i = 10; i < ranked.length; i++) {
+      const row = ranked[i];
+      lines.push(`${i + 1}° ${row.displayName} — ${row.totalPointsInMonth} pts`);
+    }
+  }
+
+  return lines.join('\n').trimEnd();
+}

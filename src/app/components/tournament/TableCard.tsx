@@ -146,6 +146,11 @@ export default function TableCard({
 
   const maxPlace = table.players.length;
 
+  const savedResultsFingerprint = useMemo(
+    () => JSON.stringify(table.results ?? null),
+    [table.results]
+  );
+
   useEffect(() => {
     if (doublesTeamScoring && table.players.length === 4) {
       if (table.results && table.results.length === 4) {
@@ -171,8 +176,7 @@ export default function TableCard({
       setSelections({});
     }
   }, [
-    table.results,
-    table.players,
+    savedResultsFingerprint,
     table.players.length,
     doublesTeamScoring,
     table.id,
