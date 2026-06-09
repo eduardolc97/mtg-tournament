@@ -122,13 +122,6 @@ function renumberRoundTables(
   return [...finals, ...regular];
 }
 
-function allRegularTablesAreFour(regularTables: Table[]): boolean {
-  return (
-    regularTables.length > 0 &&
-    regularTables.every((t) => t.players.length === 4)
-  );
-}
-
 function findLastTableIndexWithSize3(regularTables: Table[]): number {
   for (let i = regularTables.length - 1; i >= 0; i--) {
     if (regularTables[i].players.length === 3) {
@@ -138,105 +131,68 @@ function findLastTableIndexWithSize3(regularTables: Table[]): number {
   return -1;
 }
 
+function tableSizeIsInvalid(playerCount: number): boolean {
+  return playerCount > 4 || (playerCount > 0 && playerCount < 3);
+}
+
 function regularTablesHaveInvalidSizes(regularTables: Table[]): boolean {
-  return regularTables.some((t) => t.players.length > 4);
+  return regularTables.some((t) => tableSizeIsInvalid(t.players.length));
 }
 
-function redistributeSingleAllFourTable(
-  table: Table,
-  newPlayer: Player
-): Table[] {
-  const shuffled = shuffleArray([...table.players]);
-  const picked = shuffled.slice(0, 2);
-  const remaining = shuffled.slice(2);
-  return [
-    { id: 'temp', players: remaining, results: undefined },
-    { id: 'temp-last', players: [...picked, newPlayer], results: undefined },
-  ];
+function indicesOfTablesWithFour(regularTables: Table[]): number[] {
+  return regularTables
+    .map((t, i) => (t.players.length === 4 ? i : -1))
+    .filter((i) => i >= 0);
 }
 
-function redistributeLastTwoAllFourTables(
+function redistributeFromFourPlayerTables(
   regularTables: Table[],
   newPlayer: Player
-): Table[] {
-  const prefix = regularTables.slice(0, -2).map((t) => ({
-    ...t,
-    players: [...t.players],
-  }));
-
-  const secondToLast: Table = {
-    ...regularTables[regularTables.length - 2],
-    players: [...regularTables[regularTables.length - 2].players],
-  };
-  const last: Table = {
-    ...regularTables[regularTables.length - 1],
-    players: [...regularTables[regularTables.length - 1].players],
-  };
-
-  const pool: { player: Player; fromSecond: boolean }[] = [
-    ...secondToLast.players.map((player) => ({ player, fromSecond: true })),
-    ...last.players.map((player) => ({ player, fromSecond: false })),
-  ];
-
-  const picked = shuffleArray(pool).slice(0, 2);
-  const newLastTable: Table = {
-    id: 'temp-last',
-    players: [...picked.map((x) => x.player), newPlayer],
-    results: undefined,
-  };
-
-  for (const { player, fromSecond } of picked) {
-    if (fromSecond) {
-      secondToLast.players = secondToLast.players.filter(
-        (p) => p.id !== player.id
-      );
-    } else {
-      last.players = last.players.filter((p) => p.id !== player.id);
-    }
+): Table[] | null {
+  const fourIndices = indicesOfTablesWithFour(regularTables);
+  if (fourIndices.length < 2) {
+    return null;
   }
 
-  return [
-    ...prefix,
-    { ...secondToLast, results: undefined },
-    { ...last, results: undefined },
-    newLastTable,
-  ];
-}
-
-function redistributeAllFourRegularTables(
-  regularTables: Table[],
-  newPlayer: Player
-): Table[] {
-  if (regularTables.length === 1) {
-    return redistributeSingleAllFourTable(regularTables[0], newPlayer);
-  }
-  return redistributeLastTwoAllFourTables(regularTables, newPlayer);
-}
-
-function addPlayerToRegularTables(
-  regularTables: Table[],
-  newPlayer: Player
-): Table[] {
-  if (allRegularTablesAreFour(regularTables)) {
-    return redistributeAllFourRegularTables(regularTables, newPlayer);
-  }
-
-  const tableOf3Idx = findLastTableIndexWithSize3(regularTables);
-  if (tableOf3Idx < 0) {
-    return redistributeAllFourRegularTables(regularTables, newPlayer);
-  }
+  const shuffledIndices = shuffleArray(fourIndices);
+  const indexA = shuffledIndices[0];
+  const indexB = shuffledIndices[1];
 
   const copy = regularTables.map((t) => ({
     ...t,
     players: [...t.players],
   }));
 
-  if (copy[tableOf3Idx].players.length >= 4) {
-    return redistributeAllFourRegularTables(regularTables, newPlayer);
+  const pickA = shuffleArray(copy[indexA].players)[0];
+  copy[indexA].players = copy[indexA].players.filter((p) => p.id !== pickA.id);
+
+  const pickB = shuffleArray(copy[indexB].players)[0];
+  copy[indexB].players = copy[indexB].players.filter((p) => p.id !== pickB.id);
+
+  copy.push({
+    id: 'temp-new',
+    players: [pickA, pickB, newPlayer],
+    results: undefined,
+  });
+
+  return copy;
+}
+
+function addPlayerToRegularTables(
+  regularTables: Table[],
+  newPlayer: Player
+): Table[] | null {
+  const tableOf3Idx = findLastTableIndexWithSize3(regularTables);
+  if (tableOf3Idx >= 0) {
+    const copy = regularTables.map((t) => ({
+      ...t,
+      players: [...t.players],
+    }));
+    copy[tableOf3Idx].players.push(newPlayer);
+    return copy;
   }
 
-  copy[tableOf3Idx].players.push(newPlayer);
-  return copy;
+  return redistributeFromFourPlayerTables(regularTables, newPlayer);
 }
 
 function insertPlayerIntoSideTables(
@@ -261,18 +217,31 @@ function insertPlayerIntoSideTables(
       previousRounds
     );
   } else {
-    updatedRegular = addPlayerToRegularTables(regularTables, newPlayer);
+    const adjusted = addPlayerToRegularTables(regularTables, newPlayer);
+    updatedRegular =
+      adjusted ??
+      buildFlexibleTablesForRound(
+        allPlayers,
+        roundNumber,
+        1,
+        previousRounds
+      );
+  }
+
+  if (regularTablesHaveInvalidSizes(updatedRegular)) {
+    updatedRegular = buildFlexibleTablesForRound(
+      allPlayers,
+      roundNumber,
+      1,
+      previousRounds
+    );
   }
 
   return renumberRoundTables(finalTables, updatedRegular, roundNumber);
 }
 
 function roundNeedsFullRegen(tables: Table[]): boolean {
-  return tables.some(
-    (t) =>
-      t.players.length > 4 ||
-      (t.players.length > 0 && t.players.length < 3)
-  );
+  return tables.some((t) => tableSizeIsInvalid(t.players.length));
 }
 
 function removePlayerFromTables(tables: Table[], entryId: string): Table[] {
