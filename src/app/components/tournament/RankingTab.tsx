@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Tournament } from '../../types/tournament';
 import { normalizeTournamentModality } from '../../constants/tournamentModality';
 import {
@@ -14,13 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
-import { Trophy, Crown, Users } from 'lucide-react';
+import { Trophy, Crown, Users, Maximize2 } from 'lucide-react';
+import { Button } from '../ui/button';
+import RankingPresentationDialog from './RankingPresentationDialog';
 
 interface RankingTabProps {
   tournament: Tournament;
 }
 
 export default function RankingTab({ tournament }: RankingTabProps) {
+  const [presentationOpen, setPresentationOpen] = useState(false);
   const doubles =
     normalizeTournamentModality(tournament.modality) === 'doubles_cmd';
   const stats = calculatePlayerStats(tournament);
@@ -65,16 +68,34 @@ export default function RankingTab({ tournament }: RankingTabProps) {
   };
 
   return (
-    <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur overflow-hidden">
+    <>
+      <RankingPresentationDialog
+        open={presentationOpen}
+        onOpenChange={setPresentationOpen}
+        tournament={tournament}
+      />
+      <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur overflow-hidden">
       <CardHeader className="[@media(orientation:landscape)_and_(max-height:500px)]:py-3">
-        <CardTitle className="text-white flex items-center gap-2 text-lg [@media(orientation:landscape)_and_(max-height:500px)]:text-base">
-          {doubles ? (
-            <Users className="w-5 h-5 text-yellow-400 shrink-0" />
-          ) : (
-            <Trophy className="w-5 h-5 text-yellow-400 shrink-0" />
-          )}
-          {doubles ? 'Classificação por dupla' : 'Classificação geral'}
-        </CardTitle>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle className="text-white flex items-center gap-2 text-lg [@media(orientation:landscape)_and_(max-height:500px)]:text-base">
+            {doubles ? (
+              <Users className="w-5 h-5 text-yellow-400 shrink-0" />
+            ) : (
+              <Trophy className="w-5 h-5 text-yellow-400 shrink-0" />
+            )}
+            {doubles ? 'Classificação por dupla' : 'Classificação geral'}
+          </CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="ml-auto border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
+            onClick={() => setPresentationOpen(true)}
+          >
+            <Maximize2 className="mr-2 h-4 w-4" />
+            Modo apresentação
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -204,5 +225,6 @@ export default function RankingTab({ tournament }: RankingTabProps) {
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }

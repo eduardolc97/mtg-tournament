@@ -3,13 +3,19 @@
 :root {
   --font-size: 16px;
   --background: #ffffff;
+  --foreground: #252525;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
+  --card-foreground: #252525;
   --card-foreground: oklch(0.145 0 0);
+  --popover: #ffffff;
   --popover: oklch(1 0 0);
+  --popover-foreground: #252525;
   --popover-foreground: oklch(0.145 0 0);
   --primary: #030213;
+  --primary-foreground: #ffffff;
   --primary-foreground: oklch(1 0 0);
+  --secondary: #f0f0f5;
   --secondary: oklch(0.95 0.0058 264.53);
   --secondary-foreground: #030213;
   --muted: #ececf0;
@@ -24,23 +30,35 @@
   --switch-background: #cbced4;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
+  --ring: #b5b5b5;
   --ring: oklch(0.708 0 0);
+  --chart-1: #e07b2d;
   --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: #4db8a4;
   --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: #3d5a80;
   --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: #d4b84a;
   --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: #c9a227;
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
+  --sidebar: #fafafa;
   --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: #252525;
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: #030213;
+  --sidebar-primary-foreground: #fafafa;
   --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: #f5f5f5;
   --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: #333333;
   --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: #ebebeb;
   --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: #b5b5b5;
   --sidebar-ring: oklch(0.708 0 0);
-  
-  /* MTG Commander Custom Colors */
+
   --mtg-purple: #8b5cf6;
   --mtg-blue: #3b82f6;
   --mtg-gold: #fbbf24;
@@ -49,42 +67,73 @@
 }
 
 .dark {
+  --background: #1a1a1f;
   --background: oklch(0.145 0 0);
+  --foreground: #fafafa;
   --foreground: oklch(0.985 0 0);
+  --card: #1a1a1f;
   --card: oklch(0.145 0 0);
+  --card-foreground: #fafafa;
   --card-foreground: oklch(0.985 0 0);
+  --popover: #1a1a1f;
   --popover: oklch(0.145 0 0);
+  --popover-foreground: #fafafa;
   --popover-foreground: oklch(0.985 0 0);
+  --primary: #fafafa;
   --primary: oklch(0.985 0 0);
+  --primary-foreground: #333333;
   --primary-foreground: oklch(0.205 0 0);
+  --secondary: #444444;
   --secondary: oklch(0.269 0 0);
+  --secondary-foreground: #fafafa;
   --secondary-foreground: oklch(0.985 0 0);
+  --muted: #444444;
   --muted: oklch(0.269 0 0);
+  --muted-foreground: #b5b5b5;
   --muted-foreground: oklch(0.708 0 0);
+  --accent: #444444;
   --accent: oklch(0.269 0 0);
+  --accent-foreground: #fafafa;
   --accent-foreground: oklch(0.985 0 0);
+  --destructive: #9b2c2c;
   --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: #f87171;
   --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: #444444;
   --border: oklch(0.269 0 0);
+  --input: #444444;
   --input: oklch(0.269 0 0);
+  --ring: #707070;
   --ring: oklch(0.439 0 0);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
+  --chart-1: #7c5cbf;
   --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: #5cb88a;
   --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: #c9a227;
   --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: #a855c8;
   --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: #d97757;
   --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: #333333;
   --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: #fafafa;
   --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: #7c5cbf;
   --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: #fafafa;
   --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: #444444;
   --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: #fafafa;
   --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: #444444;
   --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: #707070;
   --sidebar-ring: oklch(0.439 0 0);
-  
-  /* MTG Commander Custom Colors - Dark Mode Enhanced */
+
   --mtg-purple: #a78bfa;
   --mtg-blue: #60a5fa;
   --mtg-gold: #fcd34d;
@@ -141,11 +190,6 @@
   body {
     @apply bg-background text-foreground;
   }
-
-  /**
-  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
-  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
-  */
 
   html {
     font-size: var(--font-size);

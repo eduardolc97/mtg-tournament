@@ -20,7 +20,7 @@ export default function RequireAccess() {
 
   if (gateOn && unlocked) {
     return (
-      <div className="flex min-h-[100dvh] flex-col bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
+      <div className="flex min-h-screen min-h-[100dvh] flex-col bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
         <div className="min-h-0 flex-1">
           <Outlet />
         </div>

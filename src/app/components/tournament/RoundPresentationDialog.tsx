@@ -33,7 +33,7 @@ export default function RoundPresentationDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="!fixed !inset-0 !left-0 !top-0 !flex !h-[100dvh] !max-h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 flex-col gap-[clamp(0.375rem,0.25rem+1vmin,0.875rem)] rounded-none border-slate-800 bg-slate-950 p-[clamp(0.5rem,0.3rem+1.25vmin,1.25rem)] pt-[clamp(2.75rem,1.75rem+4vmin,4rem)]"
+        className="!fixed !inset-0 !left-0 !top-0 !flex !h-screen !max-h-screen !h-[100dvh] !max-h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 flex-col gap-[clamp(0.375rem,0.25rem+1vmin,0.875rem)] rounded-none border-slate-800 bg-slate-950 p-[clamp(0.5rem,0.3rem+1.25vmin,1.25rem)] pt-[clamp(2.75rem,1.75rem+4vmin,4rem)]"
         closeClassName="text-white opacity-95 hover:opacity-100 hover:bg-white/15 data-[state=open]:text-white [&_svg]:size-[clamp(1.125rem,0.75rem+1.25vmin,1.5rem)]"
       >
         <DialogHeader className="shrink-0 space-y-[clamp(0.125rem,0.5vmin,0.375rem)] pb-[clamp(0.25rem,0.5vmin,0.5rem)] text-center">

@@ -58,7 +58,7 @@ export default function TournamentView() {
   const modality = normalizeTournamentModality(tournament.modality);
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
+    <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
       <div className="container mx-auto px-3 py-6 max-w-6xl [@media(orientation:landscape)_and_(max-height:500px)]:px-3 [@media(orientation:landscape)_and_(max-height:500px)]:py-3 sm:px-4 sm:py-8">
         <div className="mb-6 [@media(orientation:landscape)_and_(max-height:500px)]:mb-3">
           <Button
