@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
   ReactNode,
 } from 'react';
 import { Player, Tournament, TableResult } from '../types/tournament';
@@ -125,6 +126,8 @@ function withUpdatedTableResults(
 export const TournamentProvider = ({ children }: { children: ReactNode }) => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const tournamentsRef = useRef(tournaments);
+  tournamentsRef.current = tournaments;
 
   useEffect(() => {
     let cancelled = false;
@@ -171,7 +174,7 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     tableId: string,
     results: TableResult[]
   ) => {
-    const current = tournaments.find((t) => t.id === tournamentId);
+    const current = tournamentsRef.current.find((t) => t.id === tournamentId);
     if (!current) {
       throw new Error('Tournament not found');
     }
@@ -180,6 +183,9 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
       roundId,
       tableId,
       results
+    );
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? next : t))
     );
     const saved = await putTournament(next);
     setTournaments((prev) =>
