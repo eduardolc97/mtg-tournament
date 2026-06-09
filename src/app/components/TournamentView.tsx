@@ -19,7 +19,7 @@ import RoundCountdownTimer from './tournament/RoundCountdownTimer';
 export default function TournamentView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getTournamentById, loading } = useTournaments();
+  const { getTournamentById, loading, addPlayerToTournament } = useTournaments();
 
   const tournament = getTournamentById(id!);
 
@@ -130,7 +130,11 @@ export default function TournamentView() {
           </TabsList>
 
           <TabsContent value="players">
-            <PlayersTab players={tournament.players} modality={modality} />
+            <PlayersTab
+              tournament={tournament}
+              modality={modality}
+              onAddPlayer={addPlayerToTournament}
+            />
           </TabsContent>
 
           <TabsContent value="rounds">

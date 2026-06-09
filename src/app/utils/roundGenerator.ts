@@ -54,6 +54,33 @@ export function computeTableSizes(playerCount: number): number[] {
   );
 }
 
+export function computeFlexibleTableSizes(playerCount: number): number[] {
+  if (playerCount < 1) {
+    throw new Error('At least 1 player is required');
+  }
+  if (playerCount <= 2) {
+    return [playerCount];
+  }
+  if (isValidTournamentPlayerCount(playerCount)) {
+    return computeTableSizes(playerCount);
+  }
+  if (playerCount === 5) {
+    return [3, 2];
+  }
+  if (playerCount > 3) {
+    const rest = playerCount - 3;
+    if (rest <= 2) {
+      return [3, rest].sort((x, y) => y - x);
+    }
+    try {
+      return [3, ...computeTableSizes(rest)].sort((x, y) => y - x);
+    } catch {
+      return [3, ...computeFlexibleTableSizes(rest)].sort((x, y) => y - x);
+    }
+  }
+  return [playerCount];
+}
+
 export function pairKey(a: string, b: string): string {
   return a < b ? `${a}\0${b}` : `${b}\0${a}`;
 }
@@ -173,13 +200,13 @@ function optimizeRoundTablesSwap(tables: Table[], pairMap: Map<string, number>):
   }
 }
 
-export function buildTablesForRound(
+function buildTablesFromSizes(
   players: Player[],
+  sizes: number[],
   roundNumber: number,
   startingTableNumber: number,
   previousRounds: Round[]
 ): Table[] {
-  const sizes = computeTableSizes(players.length);
   const pairMap = buildPairRepeatMap(previousRounds);
   let pool = shuffleArray([...players]);
   const tables: Table[] = [];
@@ -197,6 +224,36 @@ export function buildTablesForRound(
 
   optimizeRoundTablesSwap(tables, pairMap);
   return tables;
+}
+
+export function buildTablesForRound(
+  players: Player[],
+  roundNumber: number,
+  startingTableNumber: number,
+  previousRounds: Round[]
+): Table[] {
+  return buildTablesFromSizes(
+    players,
+    computeTableSizes(players.length),
+    roundNumber,
+    startingTableNumber,
+    previousRounds
+  );
+}
+
+export function buildFlexibleTablesForRound(
+  players: Player[],
+  roundNumber: number,
+  startingTableNumber: number,
+  previousRounds: Round[]
+): Table[] {
+  return buildTablesFromSizes(
+    players,
+    computeFlexibleTableSizes(players.length),
+    roundNumber,
+    startingTableNumber,
+    previousRounds
+  );
 }
 
 function generateRoundWithPairing(

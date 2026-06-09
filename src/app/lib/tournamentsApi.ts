@@ -1,5 +1,6 @@
-import type { Tournament } from '../types/tournament';
+import type { Player, Tournament } from '../types/tournament';
 import { normalizeTournamentModality } from '../constants/tournamentModality';
+import { applyLateJoin } from '../utils/lateJoinPlayer';
 import { stripRoundsForStorage } from '../utils/roundPersistence';
 import { hydrateTournament } from '../utils/tournamentHydration';
 import { supabase } from './supabaseClient';
@@ -248,6 +249,30 @@ async function insertParticipants(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function insertSingleParticipant(
+  tournamentId: string,
+  entry: Player
+): Promise<void> {
+  const { error } = await supabase.from('tournament_participants').insert({
+    id: entry.id,
+    tournament_id: tournamentId,
+    player_id: entry.playerId,
+    partner_id: entry.partnerId ?? null,
+  });
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function addPlayerToTournament(
+  tournament: Tournament,
+  newEntry: Player
+): Promise<Tournament> {
+  const updated = applyLateJoin(tournament, newEntry);
+  await insertSingleParticipant(tournament.id, newEntry);
+  return putTournament(updated);
 }
 
 export async function fetchTournaments(): Promise<Tournament[]> {
