@@ -19,7 +19,12 @@ import RoundCountdownTimer from './tournament/RoundCountdownTimer';
 export default function TournamentView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getTournamentById, loading, addPlayerToTournament } = useTournaments();
+  const {
+    getTournamentById,
+    loading,
+    addPlayerToTournament,
+    removePlayerFromTournament,
+  } = useTournaments();
 
   const tournament = getTournamentById(id!);
 
@@ -134,6 +139,7 @@ export default function TournamentView() {
               tournament={tournament}
               modality={modality}
               onAddPlayer={addPlayerToTournament}
+              onRemovePlayer={removePlayerFromTournament}
             />
           </TabsContent>
 

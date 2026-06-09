@@ -20,6 +20,7 @@ import {
   fetchTournaments,
   postTournament,
   putTournament,
+  removePlayerFromTournament as removePlayerFromTournamentApi,
 } from '../lib/tournamentsApi';
 
 interface TournamentContextType {
@@ -30,6 +31,10 @@ interface TournamentContextType {
   addPlayerToTournament: (
     tournamentId: string,
     profile: PlayerProfile
+  ) => Promise<void>;
+  removePlayerFromTournament: (
+    tournamentId: string,
+    entryId: string
   ) => Promise<void>;
   getTournamentById: (id: string) => Tournament | undefined;
   updateTableResults: (
@@ -204,6 +209,20 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const removePlayerFromTournament = async (
+    tournamentId: string,
+    entryId: string
+  ) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    const saved = await removePlayerFromTournamentApi(current, entryId);
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
   return (
     <TournamentContext.Provider
       value={{
@@ -212,6 +231,7 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
         addTournament,
         updateTournament,
         addPlayerToTournament,
+        removePlayerFromTournament,
         getTournamentById,
         updateTableResults,
       }}

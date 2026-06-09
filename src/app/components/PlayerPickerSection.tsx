@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PlayerProfile } from '../types/player';
-import { nicknameKey } from '../types/player';
+import { matchesPlayerSearch, nicknameKey } from '../types/player';
 import { fetchPlayers, upsertPlayer } from '../lib/playersApi';
 import PlayerProfileDialog from './PlayerProfileDialog';
 import { PlayerProfileSummary } from './PlayerProfileSummary';
@@ -8,15 +8,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-
-function matchesPlayerSearch(profile: PlayerProfile, query: string): boolean {
-  const q = query.toLowerCase();
-  return (
-    profile.nickname.toLowerCase().includes(q) ||
-    (profile.fullName?.toLowerCase().includes(q) ?? false) ||
-    (profile.companionNick?.toLowerCase().includes(q) ?? false)
-  );
-}
 
 interface PlayerPickerSectionProps {
   excludedPlayerIds: Set<string>;
@@ -83,7 +74,7 @@ export default function PlayerPickerSection({
 
   const suggestions = useMemo(() => {
     const available = registry.filter((p) => !excludedPlayerIds.has(p.id));
-    const q = playerName.trim().toLowerCase();
+    const q = playerName.trim();
     if (!q) {
       return available.slice(0, 50);
     }

@@ -1,23 +1,25 @@
 import { useMemo } from 'react';
 import { pairKey } from '../../utils/roundGenerator';
-import { canAddPlayerToTournament } from '../../utils/lateJoinPlayer';
+import { canModifyTournamentRoster } from '../../utils/lateJoinPlayer';
 import type { TournamentModality } from '../../constants/tournamentModality';
 import type { PlayerProfile } from '../../types/player';
 import { Player, Tournament } from '../../types/tournament';
 import PlayerPickerSection from '../PlayerPickerSection';
+import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { User, Users, UserPlus } from 'lucide-react';
+import { User, Users, UserPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PlayersTabProps {
   tournament: Tournament;
   modality: TournamentModality;
   onAddPlayer: (tournamentId: string, profile: PlayerProfile) => Promise<void>;
+  onRemovePlayer: (tournamentId: string, entryId: string) => Promise<void>;
 }
 
 function PlayerLine({ player }: { player: Player }) {
   return (
-    <div>
+    <div className="min-w-0 flex-1">
       <p className="text-white">{player.name}</p>
       {player.fullName && (
         <p className="text-xs text-slate-500">{player.fullName}</p>
@@ -51,12 +53,13 @@ export default function PlayersTab({
   tournament,
   modality,
   onAddPlayer,
+  onRemovePlayer,
 }: PlayersTabProps) {
   const doubles = modality === 'doubles_cmd';
   const players = tournament.players;
 
-  const addGuard = useMemo(
-    () => canAddPlayerToTournament(tournament),
+  const rosterGuard = useMemo(
+    () => canModifyTournamentRoster(tournament),
     [tournament]
   );
 
@@ -77,6 +80,17 @@ export default function PlayersTab({
     }
   };
 
+  const handleRemovePlayer = async (entryId: string, name: string) => {
+    try {
+      await onRemovePlayer(tournament.id, entryId);
+      toast.success(`${name} removido do campeonato.`);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Não foi possível remover o jogador.'
+      );
+    }
+  };
+
   return (
     <div className="space-y-6">
       {!doubles && (
@@ -91,9 +105,9 @@ export default function PlayersTab({
             <PlayerPickerSection
               excludedPlayerIds={excludedPlayerIds}
               onAddFromProfile={handleAddFromProfile}
-              disabled={!addGuard.ok}
-              disabledReason={addGuard.ok ? undefined : addGuard.reason}
-              description="Adicione jogadores que chegaram após o início do campeonato. A rodada atual e as futuras serão ajustadas automaticamente."
+              disabled={!rosterGuard.ok}
+              disabledReason={rosterGuard.ok ? undefined : rosterGuard.reason}
+              description="Adicione ou remova jogadores entre rodadas. A rodada atual e as futuras serão remontadas automaticamente."
             />
           </CardContent>
         </Card>
@@ -142,6 +156,19 @@ export default function PlayersTab({
                     {index + 1}
                   </div>
                   <PlayerLine player={player} />
+                  {rosterGuard.ok && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        handleRemovePlayer(player.id, player.name)
+                      }
+                      className="text-red-400 hover:text-red-300 hover:bg-red-950/30 shrink-0"
+                      aria-label={`Remover ${player.name}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>

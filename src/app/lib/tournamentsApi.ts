@@ -1,6 +1,6 @@
 import type { Player, Tournament } from '../types/tournament';
 import { normalizeTournamentModality } from '../constants/tournamentModality';
-import { applyLateJoin } from '../utils/lateJoinPlayer';
+import { applyLateJoin, applyRosterRemoval } from '../utils/lateJoinPlayer';
 import { stripRoundsForStorage } from '../utils/roundPersistence';
 import { hydrateTournament } from '../utils/tournamentHydration';
 import { supabase } from './supabaseClient';
@@ -266,12 +266,35 @@ export async function insertSingleParticipant(
   }
 }
 
+export async function deleteSingleParticipant(
+  tournamentId: string,
+  entryId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('tournament_participants')
+    .delete()
+    .eq('id', entryId)
+    .eq('tournament_id', tournamentId);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function addPlayerToTournament(
   tournament: Tournament,
   newEntry: Player
 ): Promise<Tournament> {
   const updated = applyLateJoin(tournament, newEntry);
   await insertSingleParticipant(tournament.id, newEntry);
+  return putTournament(updated);
+}
+
+export async function removePlayerFromTournament(
+  tournament: Tournament,
+  entryId: string
+): Promise<Tournament> {
+  const updated = applyRosterRemoval(tournament, entryId);
+  await deleteSingleParticipant(tournament.id, entryId);
   return putTournament(updated);
 }
 
