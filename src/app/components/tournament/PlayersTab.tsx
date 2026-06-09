@@ -9,6 +9,20 @@ interface PlayersTabProps {
   modality: TournamentModality;
 }
 
+function PlayerLine({ player }: { player: Player }) {
+  return (
+    <div>
+      <p className="text-white">{player.name}</p>
+      {player.fullName && (
+        <p className="text-xs text-slate-500">{player.fullName}</p>
+      )}
+      {player.companionNick && (
+        <p className="text-xs text-slate-600">@{player.companionNick}</p>
+      )}
+    </div>
+  );
+}
+
 function doublesPairs(players: Player[]): Player[][] {
   const out: Player[][] = [];
   const seen = new Set<string>();
@@ -53,10 +67,10 @@ export default function PlayersTab({ players, modality }: PlayersTabProps) {
                 <p className="text-xs font-medium uppercase tracking-wide text-purple-400 mb-3">
                   Dupla {i + 1}
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {pair.map((p) => (
-                    <li key={p.id} className="text-white">
-                      {p.name}
+                    <li key={p.id}>
+                      <PlayerLine player={p} />
                     </li>
                   ))}
                 </ul>
@@ -70,10 +84,10 @@ export default function PlayersTab({ players, modality }: PlayersTabProps) {
                 key={player.id}
                 className="bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3 flex items-center gap-3 hover:bg-slate-800/70 transition-colors"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold shrink-0">
                   {index + 1}
                 </div>
-                <span className="text-white">{player.name}</span>
+                <PlayerLine player={player} />
               </div>
             ))}
           </div>

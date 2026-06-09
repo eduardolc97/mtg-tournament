@@ -1,5 +1,7 @@
 import type { Tournament } from '../types/tournament';
 import { normalizeTournamentModality } from '../constants/tournamentModality';
+import { stripRoundsForStorage } from '../utils/roundPersistence';
+import { hydrateTournament } from '../utils/tournamentHydration';
 import { supabase } from './supabaseClient';
 
 type TournamentWire = Omit<
@@ -9,6 +11,7 @@ type TournamentWire = Omit<
   | 'leagueMonth'
   | 'modality'
   | 'doublesIncludeFourthSwissRound'
+  | 'players'
 > & {
   createdAt: string;
   leagueYear?: number;
@@ -21,13 +24,43 @@ type TournamentRow = {
   id: string;
   name: string;
   created_at: string;
-  players: unknown;
   rounds: unknown;
   league_year: number;
   league_month: number;
   modality: string;
   doubles_include_fourth_swiss_round: boolean | null;
 };
+
+type ParticipantJoinRow = {
+  id: string;
+  player_id: string;
+  partner_id: string | null;
+  players: {
+    id: string;
+    nickname: string;
+    full_name: string | null;
+    companion_nick: string | null;
+  } | null;
+};
+
+type TournamentRowWithParticipants = TournamentRow & {
+  tournament_participants: ParticipantJoinRow[];
+};
+
+const TOURNAMENT_SELECT = `
+  *,
+  tournament_participants (
+    id,
+    player_id,
+    partner_id,
+    players (
+      id,
+      nickname,
+      full_name,
+      companion_nick
+    )
+  )
+`;
 
 function coerceLeagueInt(v: unknown, fallback: number): number {
   if (typeof v === 'number' && Number.isFinite(v)) {
@@ -42,7 +75,10 @@ function coerceLeagueInt(v: unknown, fallback: number): number {
   return fallback;
 }
 
-export function parseTournament(raw: TournamentWire): Tournament {
+export function parseTournament(
+  raw: TournamentWire,
+  participants: ParticipantJoinRow[] = []
+): Tournament {
   const createdAt = new Date(raw.createdAt);
   let doublesFourth: boolean | null = null;
   if (raw.doublesIncludeFourthSwissRound === true) {
@@ -50,19 +86,26 @@ export function parseTournament(raw: TournamentWire): Tournament {
   } else if (raw.doublesIncludeFourthSwissRound === false) {
     doublesFourth = false;
   }
-  return {
-    ...raw,
+
+  const base = {
+    id: raw.id,
+    name: raw.name,
+    rounds: raw.rounds,
     createdAt,
     leagueYear: coerceLeagueInt(raw.leagueYear, createdAt.getFullYear()),
     leagueMonth: coerceLeagueInt(raw.leagueMonth, createdAt.getMonth() + 1),
     modality: normalizeTournamentModality(raw.modality),
     doublesIncludeFourthSwissRound: doublesFourth,
   };
+
+  return hydrateTournament(base, participants);
 }
 
 function serializeTournament(t: Tournament): TournamentWire {
   return {
-    ...t,
+    id: t.id,
+    name: t.name,
+    rounds: stripRoundsForStorage(t.rounds),
     createdAt: t.createdAt.toISOString(),
     leagueYear: t.leagueYear,
     leagueMonth: t.leagueMonth,
@@ -79,7 +122,6 @@ function rowToWire(row: TournamentRow): TournamentWire {
   return {
     id: row.id,
     name: row.name,
-    players: row.players as TournamentWire['players'],
     rounds: row.rounds as TournamentWire['rounds'],
     createdAt: row.created_at,
     leagueYear: row.league_year,
@@ -117,7 +159,7 @@ function normalizeDoublesFourth(v: unknown): boolean | null {
   return null;
 }
 
-function assertCreatePayload(w: TournamentWire): void {
+function assertCreatePayload(w: TournamentWire, playerCount: number): void {
   const mod =
     w.modality !== undefined && w.modality !== null && w.modality !== ''
       ? w.modality
@@ -125,12 +167,12 @@ function assertCreatePayload(w: TournamentWire): void {
   if (
     typeof w.id !== 'string' ||
     typeof w.name !== 'string' ||
-    !Array.isArray(w.players) ||
     !Array.isArray(w.rounds) ||
     typeof w.createdAt !== 'string' ||
     !isValidLeagueYear(w.leagueYear) ||
     !isValidLeagueMonth(w.leagueMonth) ||
-    !isValidModality(mod)
+    !isValidModality(mod) ||
+    playerCount < 1
   ) {
     throw new Error('Invalid tournament');
   }
@@ -139,7 +181,6 @@ function assertCreatePayload(w: TournamentWire): void {
 function assertUpdatePayload(w: TournamentWire): void {
   if (
     typeof w.name !== 'string' ||
-    !Array.isArray(w.players) ||
     !Array.isArray(w.rounds) ||
     typeof w.createdAt !== 'string' ||
     !isValidLeagueYear(w.leagueYear) ||
@@ -159,7 +200,6 @@ function wireToInsertRow(w: TournamentWire): TournamentRow {
     id: w.id,
     name: w.name,
     created_at: w.createdAt,
-    players: w.players,
     rounds: w.rounds,
     league_year: w.leagueYear!,
     league_month: w.leagueMonth!,
@@ -174,7 +214,6 @@ function wireToUpdateRow(w: TournamentWire): Omit<TournamentRow, 'id'> {
   return {
     name: w.name,
     created_at: w.createdAt,
-    players: w.players,
     rounds: w.rounds,
     league_year: w.leagueYear!,
     league_month: w.leagueMonth!,
@@ -185,26 +224,36 @@ function wireToUpdateRow(w: TournamentWire): Omit<TournamentRow, 'id'> {
   };
 }
 
-export async function fetchPresetPlayerNames(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('preset_player_names')
-    .select('name')
-    .order('name', { ascending: true });
+function parseRowWithParticipants(
+  row: TournamentRowWithParticipants
+): Tournament {
+  const participants = Array.isArray(row.tournament_participants)
+    ? row.tournament_participants
+    : [];
+  return parseTournament(rowToWire(row), participants);
+}
+
+async function insertParticipants(
+  tournamentId: string,
+  players: Tournament['players']
+): Promise<void> {
+  const rows = players.map((p) => ({
+    id: p.id,
+    tournament_id: tournamentId,
+    player_id: p.playerId,
+    partner_id: p.partnerId ?? null,
+  }));
+
+  const { error } = await supabase.from('tournament_participants').insert(rows);
   if (error) {
     throw new Error(error.message);
   }
-  if (!Array.isArray(data)) {
-    return [];
-  }
-  return data
-    .map((r) => r.name)
-    .filter((x): x is string => typeof x === 'string');
 }
 
 export async function fetchTournaments(): Promise<Tournament[]> {
   const { data, error } = await supabase
     .from('tournaments')
-    .select('*')
+    .select(TOURNAMENT_SELECT)
     .order('created_at', { ascending: false });
   if (error) {
     throw new Error(error.message);
@@ -212,24 +261,34 @@ export async function fetchTournaments(): Promise<Tournament[]> {
   if (!Array.isArray(data)) {
     return [];
   }
-  return (data as TournamentRow[]).map((row) =>
-    parseTournament(rowToWire(row)),
-  );
+  return (data as TournamentRowWithParticipants[]).map(parseRowWithParticipants);
 }
 
 export async function postTournament(t: Tournament): Promise<Tournament> {
   const w = serializeTournament(t);
-  assertCreatePayload(w);
+  assertCreatePayload(w, t.players.length);
   const row = wireToInsertRow(w);
+
   const { data, error } = await supabase
     .from('tournaments')
     .insert(row)
-    .select('*')
+    .select(TOURNAMENT_SELECT)
     .single();
   if (error) {
     throw new Error(error.message);
   }
-  return parseTournament(rowToWire(data as TournamentRow));
+
+  await insertParticipants(t.id, t.players);
+
+  const { data: refreshed, error: refreshError } = await supabase
+    .from('tournaments')
+    .select(TOURNAMENT_SELECT)
+    .eq('id', t.id)
+    .single();
+  if (refreshError) {
+    return parseRowWithParticipants(data as TournamentRowWithParticipants);
+  }
+  return parseRowWithParticipants(refreshed as TournamentRowWithParticipants);
 }
 
 export async function putTournament(t: Tournament): Promise<Tournament> {
@@ -240,10 +299,10 @@ export async function putTournament(t: Tournament): Promise<Tournament> {
     .from('tournaments')
     .update(updateRow)
     .eq('id', t.id)
-    .select('*')
+    .select(TOURNAMENT_SELECT)
     .single();
   if (error) {
     throw new Error(error.message);
   }
-  return parseTournament(rowToWire(data as TournamentRow));
+  return parseRowWithParticipants(data as TournamentRowWithParticipants);
 }

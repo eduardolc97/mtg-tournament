@@ -15,6 +15,7 @@ async function deleteAllTournamentsIfPresent(): Promise<void> {
       e instanceof Prisma.PrismaClientKnownRequestError &&
       e.code === 'P2021'
     ) {
+      console.log('Tournaments table not found — skipping delete.');
       return;
     }
     throw e;
@@ -22,8 +23,10 @@ async function deleteAllTournamentsIfPresent(): Promise<void> {
 }
 
 async function main() {
+  console.log('Deleting all tournaments (historical rounds discarded)...');
   await deleteAllTournamentsIfPresent();
 
+  console.log('Seeding players from preset list...');
   for (const raw of PRESET_PLAYER_NAMES) {
     const nickname = raw.trim();
     const key = nicknameKey(nickname);
@@ -39,6 +42,8 @@ async function main() {
       update: {},
     });
   }
+
+  console.log('Migration complete.');
 }
 
 main()
