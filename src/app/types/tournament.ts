@@ -50,6 +50,7 @@ export interface PlayerStats {
   playerName: string;
   pointsByRound: number[];
   totalPoints: number;
+  fivePointTableCount: number;
 }
 
 export interface DoublesTeamStats {
@@ -57,5 +58,6 @@ export interface DoublesTeamStats {
   label: string;
   pointsByRound: number[];
   totalPoints: number;
+  fivePointTableCount: number;
 }
 

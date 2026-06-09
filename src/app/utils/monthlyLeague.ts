@@ -1,6 +1,9 @@
 import type { Tournament } from '../types/tournament';
 import { countsTowardMonthlyLeague } from '../constants/tournamentModality';
-import { calculatePlayerStats } from './tournamentRanking';
+import {
+  calculatePlayerStats,
+  playerStatsAreTied,
+} from './tournamentRanking';
 
 export interface MonthlyLeagueRow {
   key: string;
@@ -8,7 +11,43 @@ export interface MonthlyLeagueRow {
   fullName?: string | null;
   totalPointsInMonth: number;
   firstPlaceCount: number;
+  tableFirstPlaceCount: number;
   tournamentsPlayed: number;
+}
+
+function countDailyWinsByGlobalId(
+  tournament: Tournament,
+  entryToGlobal: Map<string, string>
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  const stats = calculatePlayerStats(tournament);
+  if (stats.length === 0 || stats[0].totalPoints <= 0) {
+    return counts;
+  }
+
+  const leader = stats[0];
+  for (const s of stats) {
+    if (!playerStatsAreTied(s, leader)) {
+      break;
+    }
+    const globalId = entryToGlobal.get(s.playerId);
+    if (globalId) {
+      counts.set(globalId, 1);
+    }
+  }
+
+  return counts;
+}
+
+export function monthlyLeagueRowsAreTied(
+  a: MonthlyLeagueRow,
+  b: MonthlyLeagueRow
+): boolean {
+  return (
+    a.totalPointsInMonth === b.totalPointsInMonth &&
+    a.firstPlaceCount === b.firstPlaceCount &&
+    a.tableFirstPlaceCount === b.tableFirstPlaceCount
+  );
 }
 
 export function playerNameKey(name: string): string {
@@ -34,6 +73,7 @@ export function aggregateMonthlyLeague(
       fullName?: string | null;
       totalPointsInMonth: number;
       firstPlaceCount: number;
+      tableFirstPlaceCount: number;
       tournamentsPlayed: number;
     }
   >();
@@ -47,6 +87,7 @@ export function aggregateMonthlyLeague(
           fullName: p.fullName,
           totalPointsInMonth: 0,
           firstPlaceCount: 0,
+          tableFirstPlaceCount: 0,
           tournamentsPlayed: 0,
         });
       }
@@ -65,17 +106,16 @@ export function aggregateMonthlyLeague(
       const row = byKey.get(globalId);
       if (row) {
         row.totalPointsInMonth += s.totalPoints;
+        row.tableFirstPlaceCount += s.fivePointTableCount;
         row.tournamentsPlayed += 1;
       }
     }
 
-    if (stats.length > 0 && stats[0].totalPoints > 0) {
-      const winnerGlobalId = entryToGlobal.get(stats[0].playerId);
-      if (winnerGlobalId) {
-        const row = byKey.get(winnerGlobalId);
-        if (row) {
-          row.firstPlaceCount += 1;
-        }
+    const dailyWins = countDailyWinsByGlobalId(t, entryToGlobal);
+    for (const [globalId, count] of dailyWins) {
+      const row = byKey.get(globalId);
+      if (row) {
+        row.firstPlaceCount += count;
       }
     }
   }
@@ -86,6 +126,7 @@ export function aggregateMonthlyLeague(
     fullName: v.fullName,
     totalPointsInMonth: v.totalPointsInMonth,
     firstPlaceCount: v.firstPlaceCount,
+    tableFirstPlaceCount: v.tableFirstPlaceCount,
     tournamentsPlayed: v.tournamentsPlayed,
   }));
 
@@ -95,6 +136,9 @@ export function aggregateMonthlyLeague(
     }
     if (b.firstPlaceCount !== a.firstPlaceCount) {
       return b.firstPlaceCount - a.firstPlaceCount;
+    }
+    if (b.tableFirstPlaceCount !== a.tableFirstPlaceCount) {
+      return b.tableFirstPlaceCount - a.tableFirstPlaceCount;
     }
     return a.displayName.localeCompare(b.displayName, 'pt-BR');
   });

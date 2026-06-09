@@ -4,6 +4,8 @@ import { normalizeTournamentModality } from '../../constants/tournamentModality'
 import {
   calculateDoublesTeamStats,
   calculatePlayerStats,
+  doublesTeamStatsAreTied,
+  playerStatsAreTied,
 } from '../../utils/tournamentRanking';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import {
@@ -37,6 +39,7 @@ export default function RankingTab({ tournament }: RankingTabProps) {
   }, [tournament.rounds]);
 
   const displayStats = doubles ? teamStats : stats;
+  const leader = displayStats[0];
   const empty =
     displayStats.length === 0 ||
     displayStats.every((s) => s.totalPoints === 0);
@@ -125,7 +128,10 @@ export default function RankingTab({ tournament }: RankingTabProps) {
               {doubles
                 ? teamStats.map((row, index) => {
                     const position = index + 1;
-                    const isLeader = position === 1 && row.totalPoints > 0;
+                    const isLeader =
+                      row.totalPoints > 0 &&
+                      leader !== undefined &&
+                      doublesTeamStatsAreTied(row, leader);
                     return (
                       <TableRow
                         key={row.teamKey}
@@ -173,7 +179,10 @@ export default function RankingTab({ tournament }: RankingTabProps) {
                   })
                 : stats.map((player, index) => {
                     const position = index + 1;
-                    const isLeader = position === 1 && player.totalPoints > 0;
+                    const isLeader =
+                      player.totalPoints > 0 &&
+                      leader !== undefined &&
+                      playerStatsAreTied(player, leader);
 
                     return (
                       <TableRow
