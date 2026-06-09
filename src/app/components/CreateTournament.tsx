@@ -38,6 +38,59 @@ function createEntryId(): string {
   return `entry-${Date.now()}-${Math.random()}`;
 }
 
+function matchesPlayerSearch(
+  profile: PlayerProfile,
+  query: string
+): boolean {
+  const q = query.toLowerCase();
+  return (
+    profile.nickname.toLowerCase().includes(q) ||
+    (profile.fullName?.toLowerCase().includes(q) ?? false) ||
+    (profile.companionNick?.toLowerCase().includes(q) ?? false)
+  );
+}
+
+function PlayerProfileSummary({
+  nickname,
+  fullName,
+  companionNick,
+  compact = false,
+}: {
+  nickname: string;
+  fullName?: string | null;
+  companionNick?: string | null;
+  compact?: boolean;
+}) {
+  return (
+    <div className={compact ? 'min-w-0 space-y-0.5' : 'pl-6 space-y-0.5'}>
+      {!compact ? (
+        <span className="flex items-center gap-2 text-sm text-white">
+          <User className="h-4 w-4 shrink-0 text-slate-400" />
+          {nickname}
+        </span>
+      ) : (
+        <p className="text-white truncate">{nickname}</p>
+      )}
+      <p
+        className={`truncate text-xs ${
+          fullName ? 'text-slate-400' : 'text-slate-600 italic'
+        }`}
+      >
+        {fullName ?? 'Nome completo não cadastrado'}
+      </p>
+      {companionNick ? (
+        <p className="text-xs text-purple-400/90 truncate">
+          Companion: {companionNick}
+        </p>
+      ) : (
+        !compact && (
+          <p className="text-xs text-slate-600 truncate">Companion: —</p>
+        )
+      )}
+    </div>
+  );
+}
+
 export default function CreateTournament() {
   const navigate = useNavigate();
   const { addTournament } = useTournaments();
@@ -104,9 +157,7 @@ export default function CreateTournament() {
     if (!q) {
       return available.slice(0, 50);
     }
-    return available
-      .filter((p) => p.nickname.toLowerCase().includes(q))
-      .slice(0, 50);
+    return available.filter((p) => matchesPlayerSearch(p, q)).slice(0, 50);
   }, [registry, excludedPlayerIds, playerName]);
 
   const now = new Date();
@@ -562,21 +613,17 @@ export default function CreateTournament() {
                           key={profile.id}
                           type="button"
                           role="option"
-                          className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm text-white hover:bg-purple-600/35"
+                          className="flex w-full flex-col items-start gap-1 px-3 py-2.5 text-left hover:bg-purple-600/35"
                           onMouseDown={(e) => {
                             e.preventDefault();
                             applySuggestedPlayer(profile);
                           }}
                         >
-                          <span className="flex items-center gap-2">
-                            <User className="h-4 w-4 shrink-0 text-slate-400" />
-                            {profile.nickname}
-                          </span>
-                          {profile.fullName && (
-                            <span className="pl-6 text-xs text-slate-500">
-                              {profile.fullName}
-                            </span>
-                          )}
+                          <PlayerProfileSummary
+                            nickname={profile.nickname}
+                            fullName={profile.fullName}
+                            companionNick={profile.companionNick}
+                          />
                         </button>
                       ))
                     ) : (
@@ -611,14 +658,12 @@ export default function CreateTournament() {
                       key={player.id}
                       className="flex items-center justify-between bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3"
                     >
-                      <div className="min-w-0">
-                        <p className="text-white truncate">{player.name}</p>
-                        {player.fullName && (
-                          <p className="text-xs text-slate-500 truncate">
-                            {player.fullName}
-                          </p>
-                        )}
-                      </div>
+                      <PlayerProfileSummary
+                        nickname={player.name}
+                        fullName={player.fullName}
+                        companionNick={player.companionNick}
+                        compact
+                      />
                       <Button
                         variant="ghost"
                         size="sm"
