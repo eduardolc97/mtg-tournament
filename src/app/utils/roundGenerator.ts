@@ -298,3 +298,14 @@ export function generateFlexibleSwissRoundsOneAndTwo(players: Player[]): Round[]
 export function generateRounds(players: Player[]): Round[] {
   return generateSwissRoundsOneAndTwo(players);
 }
+
+export function assertStrictMesaSizes(tables: Table[]): void {
+  for (const table of tables) {
+    const count = table.players.length;
+    if (count < 3 || count > 4) {
+      throw new Error(
+        `Mesa inválida com ${count} jogadores. Cada mesa deve ter entre 3 e 4 jogadores.`
+      );
+    }
+  }
+}

@@ -46,7 +46,7 @@ export default function RoundsTab({
     setGenerating(true);
     try {
       await onGenerateRounds(tournament.id);
-      toast.success('Rodadas geradas com sucesso!');
+      toast.success('Mesas geradas com sucesso!');
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : 'Não foi possível gerar as rodadas.'
@@ -69,14 +69,15 @@ export default function RoundsTab({
           <Target className="w-16 h-16 text-slate-600 mx-auto" />
           <p className="text-slate-400 max-w-md mx-auto">
             {singles
-              ? 'Nenhuma rodada gerada ainda. Ajuste o elenco na aba Jogadores e gere as mesas aqui quando estiver pronto.'
+              ? 'Nenhuma mesa gerada ainda. Ajuste o elenco na aba Jogadores e use o botão abaixo quando estiver pronto. Este passo só pode ser feito uma vez.'
               : 'Nenhuma rodada gerada ainda.'}
           </p>
           {singles && onGenerateRounds && (
             <>
               <p className="text-sm text-slate-500">
                 {tournament.players.length} jogador
-                {tournament.players.length !== 1 ? 'es' : ''} no elenco
+                {tournament.players.length !== 1 ? 'es' : ''} no elenco · mesas
+                de 3 ou 4 jogadores
               </p>
               <Button
                 onClick={handleGenerateRounds}
@@ -89,7 +90,7 @@ export default function RoundsTab({
                 ) : (
                   <Sparkles className="w-5 h-5 mr-2" />
                 )}
-                Gerar Rodadas
+                Gerar Mesas
               </Button>
               {!generateGuard.ok && generateGuard.reason && (
                 <p className="text-sm text-amber-400/90 max-w-md mx-auto">

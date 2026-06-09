@@ -109,8 +109,8 @@ export default function PlayersTab({
               disabledReason={rosterGuard.ok ? undefined : rosterGuard.reason}
               description={
                 tournament.rounds.length === 0
-                  ? 'Monte o elenco aqui. Gere as rodadas na aba Rodadas quando estiver pronto.'
-                  : 'Adicione ou remova jogadores entre rodadas. As mesas são ajustadas automaticamente (máximo 4 por mesa).'
+                  ? 'Monte o elenco aqui. Depois vá à aba Rodadas e clique em Gerar Mesas (apenas uma vez).'
+                  : 'Adicione ou remova jogadores entre rodadas. As mesas são ajustadas automaticamente (mínimo 3, máximo 4 por mesa).'
               }
             />
           </CardContent>

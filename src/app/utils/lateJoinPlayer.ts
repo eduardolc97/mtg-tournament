@@ -2,8 +2,10 @@ import { normalizeTournamentModality } from '../constants/tournamentModality';
 import type { Player, Round, Table, Tournament } from '../types/tournament';
 import { buildRoundThree, isRoundFullyScored } from './finalRound';
 import {
+  assertStrictMesaSizes,
   buildFlexibleTablesForRound,
-  generateFlexibleSwissRoundsOneAndTwo,
+  generateSwissRoundsOneAndTwo,
+  isValidTournamentPlayerCount,
 } from './roundGenerator';
 import { expectedSwissRoundsForTournament } from './tournamentSwiss';
 
@@ -80,13 +82,20 @@ export function canGenerateTournamentRounds(
   }
 
   if (tournament.rounds.length > 0) {
-    return { ok: false, reason: 'As rodadas já foram geradas.' };
+    return { ok: false, reason: 'As mesas já foram geradas para este campeonato.' };
   }
 
   if (tournament.players.length < 3) {
     return {
       ok: false,
-      reason: 'Adicione pelo menos 3 jogadores antes de gerar as rodadas.',
+      reason: 'Adicione pelo menos 3 jogadores antes de gerar as mesas.',
+    };
+  }
+
+  if (!isValidTournamentPlayerCount(tournament.players.length)) {
+    return {
+      ok: false,
+      reason: `Com ${tournament.players.length} jogadores não é possível formar mesas só de 3 ou 4. Ajuste o elenco na aba Jogadores.`,
     };
   }
 
@@ -395,7 +404,10 @@ export function generateInitialRoundsForTournament(
     throw new Error(guard.reason ?? 'Não é possível gerar rodadas.');
   }
 
-  const rounds = generateFlexibleSwissRoundsOneAndTwo(tournament.players);
+  const rounds = generateSwissRoundsOneAndTwo(tournament.players);
+  for (const round of rounds) {
+    assertStrictMesaSizes(round.tables);
+  }
   return { ...tournament, rounds };
 }
 

@@ -415,8 +415,9 @@ export default function CreateTournament() {
         )}
         {modality !== 'doubles_cmd' && players.length >= minPlayers && (
           <p className="text-center text-slate-400 text-sm mt-4 max-w-md mx-auto">
-            As rodadas serão geradas na aba Rodadas, quando você estiver com o
-            elenco fechado.
+            O campeonato será criado sem mesas. Na aba Rodadas, use{' '}
+            <span className="text-slate-300">Gerar Mesas</span> uma única vez
+            quando o elenco estiver fechado.
           </p>
         )}
         {modality === 'doubles_cmd' &&
