@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useTournaments } from '../context/TournamentContext';
 import { LEAGUE_MONTHS_PT, leagueYearOptions } from '../constants/leaguePeriod';
@@ -24,8 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { ArrowLeft, Crown, Loader2 } from 'lucide-react';
+import { ArrowLeft, Crown, Loader2, Maximize2 } from 'lucide-react';
 import PageHeaderBrand from './PageHeaderBrand';
+import MonthlyLeaguePresentationDialog from './MonthlyLeaguePresentationDialog';
 
 function parseQueryInt(
   params: URLSearchParams,
@@ -43,6 +44,7 @@ function parseQueryInt(
 export default function MonthlyLeaguePage() {
   const { tournaments, loading } = useTournaments();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [presentationOpen, setPresentationOpen] = useState(false);
 
   const now = new Date();
   const defaultYear = now.getFullYear();
@@ -114,8 +116,8 @@ export default function MonthlyLeaguePage() {
           Soma de pontos só dos campeonatos na modalidade{' '}
           <span className="text-slate-300">Liga CMD 100 semanal</span> (CMD em
           duplas e CMD mesão livre não entram). O mesmo jogador cadastrado em
-          eventos diferentes entra junto (por ID). Vitórias = quantas vezes ficou
-          em 1º no campeonato.
+          eventos diferentes entra junto (por ID). Desempate (pontos empatados):
+          vitórias diárias, depois mesas em que ganhou 5 pontos (1º na mesa).
         </p>
 
         <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur mb-6">
@@ -203,22 +205,44 @@ export default function MonthlyLeaguePage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur overflow-hidden">
+          <>
+            <MonthlyLeaguePresentationDialog
+              open={presentationOpen}
+              onOpenChange={setPresentationOpen}
+              periodLabel={monthLabel(year, month)}
+              eventCount={eventCount}
+              rows={rows}
+            />
+            <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-white flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <span className="capitalize">{monthLabel(year, month)}</span>
-                <span className="text-sm font-normal text-slate-400 text-right">
-                  {eventCount} campeonato{eventCount !== 1 ? 's' : ''} (Liga CMD
-                  100 semanal)
-                  {excludedFromLeagueCount > 0 ? (
-                    <span className="block text-slate-500 mt-1">
-                      +{excludedFromLeagueCount} outro
-                      {excludedFromLeagueCount !== 1 ? 's' : ''} no mês (fora da
-                      liga)
-                    </span>
-                  ) : null}
-                </span>
-              </CardTitle>
+              <div className="flex flex-wrap items-start gap-2">
+                <CardTitle className="text-white flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between flex-1 min-w-0">
+                  <span className="capitalize">{monthLabel(year, month)}</span>
+                  <span className="text-sm font-normal text-slate-400 text-right">
+                    {eventCount} campeonato{eventCount !== 1 ? 's' : ''} (Liga CMD
+                    100 semanal)
+                    {excludedFromLeagueCount > 0 ? (
+                      <span className="block text-slate-500 mt-1">
+                        +{excludedFromLeagueCount} outro
+                        {excludedFromLeagueCount !== 1 ? 's' : ''} no mês (fora da
+                        liga)
+                      </span>
+                    ) : null}
+                  </span>
+                </CardTitle>
+                {rows.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
+                    onClick={() => setPresentationOpen(true)}
+                  >
+                    <Maximize2 className="mr-2 h-4 w-4" />
+                    Modo apresentação
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -231,9 +255,12 @@ export default function MonthlyLeaguePage() {
                         Pontos (mês)
                       </TableHead>
                       <TableHead className="text-slate-300 text-center">
-                        1º lugares
+                        Vit. diárias
                       </TableHead>
                       <TableHead className="text-slate-300 text-center hidden sm:table-cell">
+                        Mesas 5 pts
+                      </TableHead>
+                      <TableHead className="text-slate-300 text-center hidden md:table-cell">
                         Eventos
                       </TableHead>
                     </TableRow>
@@ -282,7 +309,10 @@ export default function MonthlyLeaguePage() {
                           <TableCell className="text-center tabular-nums text-slate-200">
                             {row.firstPlaceCount}
                           </TableCell>
-                          <TableCell className="text-center tabular-nums text-slate-400 hidden sm:table-cell">
+                          <TableCell className="text-center tabular-nums text-slate-300 hidden sm:table-cell">
+                            {row.tableFirstPlaceCount}
+                          </TableCell>
+                          <TableCell className="text-center tabular-nums text-slate-400 hidden md:table-cell">
                             {row.tournamentsPlayed}
                           </TableCell>
                         </TableRow>
@@ -293,6 +323,7 @@ export default function MonthlyLeaguePage() {
               </div>
             </CardContent>
           </Card>
+          </>
         )}
       </div>
     </div>

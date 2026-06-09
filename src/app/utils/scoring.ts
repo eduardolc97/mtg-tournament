@@ -7,6 +7,8 @@ export const POINTS_MAP: Record<number, number> = {
   4: 0,
 };
 
+export const TABLE_FIRST_PLACE_POINTS = POINTS_MAP[1];
+
 export function pointsFromOutcome(outcome: TableOutcome, maxPlace: number): number {
   if (outcome.type === 'tie') {
     return 1;
