@@ -140,7 +140,7 @@ export default function CreateTournament() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
+    <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
       <div className="container mx-auto px-3 py-6 max-w-4xl sm:px-4 sm:py-8 [@media(orientation:landscape)_and_(max-height:500px)]:py-4">
         <div className="mb-6 sm:mb-8 [@media(orientation:landscape)_and_(max-height:500px)]:mb-4">
           <Button

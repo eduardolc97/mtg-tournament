@@ -109,3 +109,33 @@ export function calculateDoublesTeamStats(
 
   return rows;
 }
+
+export interface RankedGroup<T> {
+  rank: number;
+  rows: T[];
+}
+
+export function groupByCompetitionRank<T extends { totalPoints: number }>(
+  stats: T[]
+): RankedGroup<T>[] {
+  if (stats.length === 0) {
+    return [];
+  }
+
+  const groups: RankedGroup<T>[] = [];
+  let currentRank = 1;
+
+  for (let i = 0; i < stats.length; i++) {
+    if (i > 0 && stats[i].totalPoints !== stats[i - 1].totalPoints) {
+      currentRank = i + 1;
+    }
+    const last = groups[groups.length - 1];
+    if (last && last.rank === currentRank) {
+      last.rows.push(stats[i]);
+    } else {
+      groups.push({ rank: currentRank, rows: [stats[i]] });
+    }
+  }
+
+  return groups;
+}

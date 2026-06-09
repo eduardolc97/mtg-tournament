@@ -1,0 +1,31 @@
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .backdrop-blur {
+    background-color: rgba(15, 23, 42, 0.82) !important;
+  }
+
+  .backdrop-blur-sm {
+    background-color: rgba(15, 23, 42, 0.78) !important;
+  }
+}
+
+@supports not (height: 100dvh) {
+  .min-h-\[100dvh\] {
+    min-height: 100vh;
+  }
+
+  .h-\[100dvh\] {
+    height: 100vh;
+  }
+
+  .max-h-\[100dvh\] {
+    max-height: 100vh;
+  }
+}
+
+@supports not (-webkit-background-clip: text) {
+  .bg-clip-text.text-transparent {
+    -webkit-text-fill-color: inherit;
+    color: #c4b5fd;
+    background-image: none;
+  }
+}

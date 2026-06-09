@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { PlayerProfile } from '../types/player';
 import { matchesPlayerSearch, nicknameKey } from '../types/player';
 import { fetchPlayers, upsertPlayer } from '../lib/playersApi';
@@ -34,7 +35,26 @@ export default function PlayerPickerSection({
   const [requireFullName, setRequireFullName] = useState(false);
   const [playerName, setPlayerName] = useState('');
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
   const suggestContainerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const updateDropdownPosition = useCallback(() => {
+    const el = suggestContainerRef.current;
+    if (!el) {
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    setDropdownStyle({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,13 +76,30 @@ export default function PlayerPickerSection({
 
   useEffect(() => {
     if (!suggestOpen) {
+      setDropdownStyle(null);
+      return;
+    }
+    updateDropdownPosition();
+    window.addEventListener('resize', updateDropdownPosition);
+    window.addEventListener('scroll', updateDropdownPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateDropdownPosition);
+      window.removeEventListener('scroll', updateDropdownPosition, true);
+    };
+  }, [suggestOpen, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!suggestOpen) {
       return;
     }
     const onDocMouseDown = (e: MouseEvent) => {
-      const el = suggestContainerRef.current;
-      if (el && !el.contains(e.target as Node)) {
-        setSuggestOpen(false);
+      const target = e.target as Node;
+      const container = suggestContainerRef.current;
+      const dropdown = dropdownRef.current;
+      if (container?.contains(target) || dropdown?.contains(target)) {
+        return;
       }
+      setSuggestOpen(false);
     };
     document.addEventListener('mousedown', onDocMouseDown);
     return () => document.removeEventListener('mousedown', onDocMouseDown);
@@ -86,6 +123,7 @@ export default function PlayerPickerSection({
     existing: PlayerProfile | null,
     forceFullName: boolean
   ) => {
+    setSuggestOpen(false);
     setPendingNickname(nickname);
     setPendingExisting(existing);
     setRequireFullName(forceFullName);
@@ -217,43 +255,54 @@ export default function PlayerPickerSection({
             autoComplete="off"
             className="bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500"
           />
-          {suggestOpen && !disabled && registry.length > 0 && (
-            <div
-              className="absolute left-0 right-0 top-full z-[100] mt-1 max-h-60 overflow-y-auto rounded-md border border-slate-600 bg-slate-900 py-1 shadow-xl"
-              role="listbox"
-              aria-label="Jogadores cadastrados"
-            >
-              <p className="px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
-                Já cadastrados
-              </p>
-              {suggestions.length > 0 ? (
-                suggestions.map((profile) => (
-                  <button
-                    key={profile.id}
-                    type="button"
-                    role="option"
-                    className="flex w-full flex-col items-start gap-1 px-3 py-2.5 text-left hover:bg-purple-600/35"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applySuggestedPlayer(profile);
-                    }}
-                  >
-                    <PlayerProfileSummary
-                      nickname={profile.nickname}
-                      fullName={profile.fullName}
-                      companionNick={profile.companionNick}
-                    />
-                  </button>
-                ))
-              ) : (
-                <p className="px-3 py-4 text-center text-sm text-slate-500">
-                  {availableRegistryCount === 0
-                    ? 'Todos os jogadores cadastrados já estão nesta lista. Digite um apelido novo.'
-                    : 'Nenhum jogador combina com a busca. Use o texto digitado como apelido novo.'}
+          {suggestOpen &&
+            !disabled &&
+            registry.length > 0 &&
+            dropdownStyle &&
+            createPortal(
+              <div
+                ref={dropdownRef}
+                style={{
+                  top: dropdownStyle.top,
+                  left: dropdownStyle.left,
+                  width: dropdownStyle.width,
+                }}
+                className="fixed z-50 max-h-60 overflow-y-auto rounded-md border border-slate-600 bg-slate-950 py-1 shadow-2xl"
+                role="listbox"
+                aria-label="Jogadores cadastrados"
+              >
+                <p className="px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Já cadastrados
                 </p>
-              )}
-            </div>
-          )}
+                {suggestions.length > 0 ? (
+                  suggestions.map((profile) => (
+                    <button
+                      key={profile.id}
+                      type="button"
+                      role="option"
+                      className="flex w-full flex-col items-start gap-1 bg-slate-950 px-3 py-2.5 text-left hover:bg-purple-600/35"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        applySuggestedPlayer(profile);
+                      }}
+                    >
+                      <PlayerProfileSummary
+                        nickname={profile.nickname}
+                        fullName={profile.fullName}
+                        companionNick={profile.companionNick}
+                      />
+                    </button>
+                  ))
+                ) : (
+                  <p className="bg-slate-950 px-3 py-4 text-center text-sm text-slate-500">
+                    {availableRegistryCount === 0
+                      ? 'Todos os jogadores cadastrados já estão nesta lista. Digite um apelido novo.'
+                      : 'Nenhum jogador combina com a busca. Use o texto digitado como apelido novo.'}
+                  </p>
+                )}
+              </div>,
+              document.body
+            )}
         </div>
         <Button
           onClick={handleAddPlayer}
