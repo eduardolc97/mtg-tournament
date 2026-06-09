@@ -1,6 +1,10 @@
 import type { Player, Tournament } from '../types/tournament';
 import { normalizeTournamentModality } from '../constants/tournamentModality';
-import { applyLateJoin, applyRosterRemoval } from '../utils/lateJoinPlayer';
+import {
+  applyLateJoin,
+  applyRosterRemoval,
+  generateInitialRoundsForTournament,
+} from '../utils/lateJoinPlayer';
 import { stripRoundsForStorage } from '../utils/roundPersistence';
 import { hydrateTournament } from '../utils/tournamentHydration';
 import { supabase } from './supabaseClient';
@@ -295,6 +299,13 @@ export async function removePlayerFromTournament(
 ): Promise<Tournament> {
   const updated = applyRosterRemoval(tournament, entryId);
   await deleteSingleParticipant(tournament.id, entryId);
+  return putTournament(updated);
+}
+
+export async function generateTournamentRounds(
+  tournament: Tournament
+): Promise<Tournament> {
+  const updated = generateInitialRoundsForTournament(tournament);
   return putTournament(updated);
 }
 

@@ -13,10 +13,7 @@ import {
   isValidDoublesPlayerCount,
 } from '../utils/doublesRoundGenerator';
 import { createEntryId } from '../utils/lateJoinPlayer';
-import {
-  generateSwissRoundsOneAndTwo,
-  isValidTournamentPlayerCount,
-} from '../utils/roundGenerator';
+import { isValidTournamentPlayerCount } from '../utils/roundGenerator';
 import PlayerPickerSection from './PlayerPickerSection';
 import { PlayerProfileSummary } from './PlayerProfileSummary';
 import { Button } from './ui/button';
@@ -82,7 +79,7 @@ export default function CreateTournament() {
     setPlayers(players.filter((p) => p.id !== entryId));
   };
 
-  const handleGenerateRounds = async () => {
+  const handleCreateTournament = async () => {
     if (players.length < minPlayers) {
       toast.error(
         modality === 'doubles_cmd'
@@ -97,34 +94,27 @@ export default function CreateTournament() {
       return;
     }
 
-    if (!playerCountOk) {
-      toast.error(
-        modality === 'doubles_cmd'
-          ? 'CMD em duplas: use 8, 12, 16… jogadores (múltiplo de 4).'
-          : 'Com mesas só de 3 ou 4 jogadores, 5 pessoas não fecha. Use 4, 6, 7, 8… ou outro total válido.'
-      );
-      return;
-    }
+    let rounds: Tournament['rounds'] = [];
+    let playersOut: Player[] = players;
 
-    let rounds;
-    let playersOut: Player[];
-    try {
-      if (modality === 'doubles_cmd') {
+    if (modality === 'doubles_cmd') {
+      if (!playerCountOk) {
+        toast.error('CMD em duplas: use 8, 12, 16… jogadores (múltiplo de 4).');
+        return;
+      }
+      try {
         const gen = generateDoublesSwissRounds(
           players,
           includeFourthDoublesRound
         );
         playersOut = gen.players;
         rounds = gen.rounds;
-      } else {
-        playersOut = players;
-        rounds = generateSwissRoundsOneAndTwo(players);
+      } catch (e) {
+        toast.error(
+          e instanceof Error ? e.message : 'Não foi possível montar as mesas.'
+        );
+        return;
       }
-    } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : 'Não foi possível montar as mesas.'
-      );
-      return;
     }
 
     const tournament: Tournament = {
@@ -408,29 +398,26 @@ export default function CreateTournament() {
 
         <div className="flex justify-center">
           <Button
-            onClick={handleGenerateRounds}
-            disabled={
-              players.length < minPlayers ||
-              !tournamentName.trim() ||
-              !playerCountOk
-            }
+            onClick={handleCreateTournament}
+            disabled={players.length < minPlayers || !tournamentName.trim()}
             size="lg"
             className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/50 hover:shadow-purple-500/70 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles className="w-5 h-5 mr-2" />
-            Gerar Rodadas
+            {modality === 'doubles_cmd' ? 'Gerar Rodadas' : 'Criar Campeonato'}
           </Button>
         </div>
 
         {players.length > 0 && players.length < minPlayers && (
           <p className="text-center text-slate-500 text-sm mt-4">
-            Adicione pelo menos {minPlayers} jogadores para gerar as rodadas
+            Adicione pelo menos {minPlayers} jogadores para criar o campeonato
           </p>
         )}
-        {modality !== 'doubles_cmd' && players.length === 5 && (
-          <p className="text-center text-amber-400/90 text-sm mt-4 max-w-md mx-auto">
-            5 jogadores não permitem só mesas de 3 ou 4 (sempre sobra 1 ou 2).
-            Adicione ou remova alguém (ex.: 4 ou 6 jogadores).
+        {modality !== 'doubles_cmd' && players.length >= minPlayers && (
+          <p className="text-center text-slate-400 text-sm mt-4 max-w-md mx-auto">
+            O campeonato será criado sem mesas. Na aba Rodadas, use{' '}
+            <span className="text-slate-300">Gerar Mesas</span> uma única vez
+            quando o elenco estiver fechado.
           </p>
         )}
         {modality === 'doubles_cmd' &&

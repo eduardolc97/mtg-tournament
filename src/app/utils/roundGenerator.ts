@@ -278,6 +278,34 @@ export function generateSwissRoundsOneAndTwo(players: Player[]): Round[] {
   return rounds;
 }
 
+export function generateFlexibleSwissRoundsOneAndTwo(players: Player[]): Round[] {
+  const rounds: Round[] = [];
+  const r1Tables = buildFlexibleTablesForRound(players, 1, 1, []);
+  rounds.push({
+    id: 'round-1',
+    number: 1,
+    tables: r1Tables,
+  });
+  const r2Tables = buildFlexibleTablesForRound(players, 2, 1, rounds);
+  rounds.push({
+    id: 'round-2',
+    number: 2,
+    tables: r2Tables,
+  });
+  return rounds;
+}
+
 export function generateRounds(players: Player[]): Round[] {
   return generateSwissRoundsOneAndTwo(players);
+}
+
+export function assertStrictMesaSizes(tables: Table[]): void {
+  for (const table of tables) {
+    const count = table.players.length;
+    if (count < 3 || count > 4) {
+      throw new Error(
+        `Mesa inválida com ${count} jogadores. Cada mesa deve ter entre 3 e 4 jogadores.`
+      );
+    }
+  }
 }

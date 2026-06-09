@@ -1,20 +1,29 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { normalizeTournamentModality } from '../../constants/tournamentModality';
 import { Tournament } from '../../types/tournament';
+import { canGenerateTournamentRounds } from '../../utils/lateJoinPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Target, Circle, Maximize2 } from 'lucide-react';
+import { Target, Circle, Maximize2, Sparkles, Loader2 } from 'lucide-react';
 import TableCard from './TableCard';
 import RoundPresentationDialog from './RoundPresentationDialog';
 import { isRoundFullyScored } from '../../utils/finalRound';
+import { toast } from 'sonner';
 
 interface RoundsTabProps {
   tournament: Tournament;
+  onGenerateRounds?: (tournamentId: string) => Promise<void>;
 }
 
-export default function RoundsTab({ tournament }: RoundsTabProps) {
+export default function RoundsTab({
+  tournament,
+  onGenerateRounds,
+}: RoundsTabProps) {
   const doubles =
     normalizeTournamentModality(tournament.modality) === 'doubles_cmd';
+  const singles =
+    normalizeTournamentModality(tournament.modality) !== 'doubles_cmd';
+  const [generating, setGenerating] = useState(false);
   const [presentationRoundId, setPresentationRoundId] = useState<string | null>(
     null
   );
@@ -22,12 +31,74 @@ export default function RoundsTab({ tournament }: RoundsTabProps) {
     ? tournament.rounds.find((r) => r.id === presentationRoundId)
     : undefined;
 
+  const generateGuard = useMemo(
+    () => canGenerateTournamentRounds(tournament),
+    [tournament]
+  );
+
+  const handleGenerateRounds = async () => {
+    if (!onGenerateRounds || !generateGuard.ok) {
+      if (generateGuard.reason) {
+        toast.error(generateGuard.reason);
+      }
+      return;
+    }
+    setGenerating(true);
+    try {
+      await onGenerateRounds(tournament.id);
+      toast.success('Mesas geradas com sucesso!');
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Não foi possível gerar as rodadas.'
+      );
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   if (tournament.rounds.length === 0) {
     return (
       <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur">
-        <CardContent className="py-12 text-center">
-          <Target className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-          <p className="text-slate-400">Nenhuma rodada gerada ainda.</p>
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Target className="w-5 h-5 text-purple-400" />
+            Rodadas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="py-8 text-center space-y-4">
+          <Target className="w-16 h-16 text-slate-600 mx-auto" />
+          <p className="text-slate-400 max-w-md mx-auto">
+            {singles
+              ? 'Nenhuma mesa gerada ainda. Ajuste o elenco na aba Jogadores e use o botão abaixo quando estiver pronto. Este passo só pode ser feito uma vez.'
+              : 'Nenhuma rodada gerada ainda.'}
+          </p>
+          {singles && onGenerateRounds && (
+            <>
+              <p className="text-sm text-slate-500">
+                {tournament.players.length} jogador
+                {tournament.players.length !== 1 ? 'es' : ''} no elenco · mesas
+                de 3 ou 4 jogadores
+              </p>
+              <Button
+                onClick={handleGenerateRounds}
+                disabled={!generateGuard.ok || generating}
+                size="lg"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              >
+                {generating ? (
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="w-5 h-5 mr-2" />
+                )}
+                Gerar Mesas
+              </Button>
+              {!generateGuard.ok && generateGuard.reason && (
+                <p className="text-sm text-amber-400/90 max-w-md mx-auto">
+                  {generateGuard.reason}
+                </p>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
     );
