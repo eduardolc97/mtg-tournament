@@ -5,6 +5,7 @@ import { calculatePlayerStats } from './tournamentRanking';
 export interface MonthlyLeagueRow {
   key: string;
   displayName: string;
+  fullName?: string | null;
   totalPointsInMonth: number;
   firstPlaceCount: number;
   tournamentsPlayed: number;
@@ -30,6 +31,7 @@ export function aggregateMonthlyLeague(
     string,
     {
       displayName: string;
+      fullName?: string | null;
       totalPointsInMonth: number;
       firstPlaceCount: number;
       tournamentsPlayed: number;
@@ -38,10 +40,11 @@ export function aggregateMonthlyLeague(
 
   for (const t of inMonth) {
     for (const p of t.players) {
-      const key = playerNameKey(p.name);
+      const key = p.playerId;
       if (!byKey.has(key)) {
         byKey.set(key, {
           displayName: p.name.trim(),
+          fullName: p.fullName,
           totalPointsInMonth: 0,
           firstPlaceCount: 0,
           tournamentsPlayed: 0,
@@ -50,9 +53,16 @@ export function aggregateMonthlyLeague(
     }
 
     const stats = calculatePlayerStats(t);
+    const entryToGlobal = new Map(
+      t.players.map((p) => [p.id, p.playerId] as const)
+    );
+
     for (const s of stats) {
-      const key = playerNameKey(s.playerName);
-      const row = byKey.get(key);
+      const globalId = entryToGlobal.get(s.playerId);
+      if (!globalId) {
+        continue;
+      }
+      const row = byKey.get(globalId);
       if (row) {
         row.totalPointsInMonth += s.totalPoints;
         row.tournamentsPlayed += 1;
@@ -60,10 +70,12 @@ export function aggregateMonthlyLeague(
     }
 
     if (stats.length > 0 && stats[0].totalPoints > 0) {
-      const winnerKey = playerNameKey(stats[0].playerName);
-      const row = byKey.get(winnerKey);
-      if (row) {
-        row.firstPlaceCount += 1;
+      const winnerGlobalId = entryToGlobal.get(stats[0].playerId);
+      if (winnerGlobalId) {
+        const row = byKey.get(winnerGlobalId);
+        if (row) {
+          row.firstPlaceCount += 1;
+        }
       }
     }
   }
@@ -71,6 +83,7 @@ export function aggregateMonthlyLeague(
   const rows: MonthlyLeagueRow[] = [...byKey.entries()].map(([key, v]) => ({
     key,
     displayName: v.displayName,
+    fullName: v.fullName,
     totalPointsInMonth: v.totalPointsInMonth,
     firstPlaceCount: v.firstPlaceCount,
     tournamentsPlayed: v.tournamentsPlayed,

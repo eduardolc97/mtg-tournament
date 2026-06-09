@@ -8,22 +8,41 @@ datasource db {
 }
 
 model Tournament {
-  id                             String   @id @map("id")
+  id                             String                  @id @map("id")
   name                           String
-  createdAt                      DateTime @map("created_at")
-  players                        Json     @db.JsonB
-  rounds                         Json     @db.JsonB
-  leagueYear                     Int      @map("league_year")
-  leagueMonth                    Int      @map("league_month")
-  modality                       String   @default("weekly_cmd100")
-  doublesIncludeFourthSwissRound Boolean? @map("doubles_include_fourth_swiss_round")
+  createdAt                      DateTime                @map("created_at")
+  rounds                         Json                    @db.JsonB
+  leagueYear                     Int                     @map("league_year")
+  leagueMonth                    Int                     @map("league_month")
+  modality                       String                  @default("weekly_cmd100")
+  doublesIncludeFourthSwissRound Boolean?                @map("doubles_include_fourth_swiss_round")
+  participants                   TournamentParticipant[]
 
   @@map("tournaments")
 }
 
-model PresetPlayerName {
-  id   Int    @id @default(autoincrement()) @map("id")
-  name String @unique @map("name")
+model Player {
+  id            String                  @id @default(cuid())
+  nickname      String                  @map("nickname")
+  nicknameKey   String                  @unique @map("nickname_key")
+  fullName      String?                 @map("full_name")
+  companionNick String?                 @map("companion_nick")
+  createdAt     DateTime                @default(now()) @map("created_at")
+  updatedAt     DateTime                @updatedAt @map("updated_at")
+  participants  TournamentParticipant[]
 
-  @@map("preset_player_names")
+  @@map("players")
+}
+
+model TournamentParticipant {
+  id           String   @id @map("id")
+  tournamentId String   @map("tournament_id")
+  playerId     String   @map("player_id")
+  partnerId    String?  @map("partner_id")
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  player     Player     @relation(fields: [playerId], references: [id])
+
+  @@unique([tournamentId, playerId])
+  @@map("tournament_participants")
 }

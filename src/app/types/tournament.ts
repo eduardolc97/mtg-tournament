@@ -2,7 +2,10 @@ import type { TournamentModality } from '../constants/tournamentModality';
 
 export interface Player {
   id: string;
+  playerId: string;
   name: string;
+  fullName?: string | null;
+  companionNick?: string | null;
   partnerId?: string;
 }
 

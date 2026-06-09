@@ -8,7 +8,9 @@
     "dev": "vite",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
+    "db:setup": "prisma db push --accept-data-loss && prisma db seed",
     "db:seed": "prisma db seed",
+    "db:migrate-players": "tsx prisma/migrate-players.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

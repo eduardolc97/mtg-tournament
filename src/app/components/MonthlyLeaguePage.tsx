@@ -113,9 +113,9 @@ export default function MonthlyLeaguePage() {
         <p className="text-slate-400 text-sm mb-6 max-w-xl">
           Soma de pontos só dos campeonatos na modalidade{' '}
           <span className="text-slate-300">Liga CMD 100 semanal</span> (CMD em
-          duplas e CMD mesão livre não entram). Mesmo nome de jogador em
-          eventos diferentes entra junto. Vitórias = quantas vezes ficou em 1º
-          no campeonato.
+          duplas e CMD mesão livre não entram). O mesmo jogador cadastrado em
+          eventos diferentes entra junto (por ID). Vitórias = quantas vezes ficou
+          em 1º no campeonato.
         </p>
 
         <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur mb-6">
@@ -255,18 +255,26 @@ export default function MonthlyLeaguePage() {
                             {pos}
                           </TableCell>
                           <TableCell>
-                            <span
-                              className={
-                                leader
-                                  ? 'text-yellow-300 font-semibold'
-                                  : 'text-white'
-                              }
-                            >
-                              {row.displayName}
-                              {leader && (
-                                <Crown className="w-4 h-4 inline ml-1 text-yellow-400" />
+                            <div>
+                              <span
+                                className={
+                                  leader
+                                    ? 'text-yellow-300 font-semibold'
+                                    : 'text-white'
+                                }
+                                title={row.fullName ?? undefined}
+                              >
+                                {row.displayName}
+                                {leader && (
+                                  <Crown className="w-4 h-4 inline ml-1 text-yellow-400" />
+                                )}
+                              </span>
+                              {row.fullName && (
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  {row.fullName}
+                                </p>
                               )}
-                            </span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-center tabular-nums text-purple-300 font-semibold">
                             {row.totalPointsInMonth}
