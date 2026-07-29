@@ -41,9 +41,6 @@ export default function PauperPlayersTab({
 }: PauperPlayersTabProps) {
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, PauperRecord>>({});
-  const [pendingPauperRecord, setPendingPauperRecord] = useState<PauperRecord>({
-    ...DEFAULT_PAUPER_RECORD,
-  });
 
   const excludedPlayerIds = useMemo(
     () => new Set(tournament.players.map((p) => p.playerId)),
@@ -131,10 +128,7 @@ export default function PauperPlayersTab({
             excludedPlayerIds={excludedPlayerIds}
             onAddFromProfile={handleAddFromProfile}
             showPauperFields
-            pauperRecord={pendingPauperRecord}
-            onPauperRecordChange={setPendingPauperRecord}
             pointsDoubled={pointsDoubled}
-            description="Digite o apelido e, se quiser, já informe V/D/E e aproveitamento antes de adicionar."
           />
         </CardContent>
       </Card>

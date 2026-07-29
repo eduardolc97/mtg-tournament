@@ -2,12 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { PlayerProfile } from '../types/player';
 import type { PauperRecord } from '../utils/pauperScoring';
-import { DEFAULT_PAUPER_RECORD } from '../utils/pauperScoring';
 import { matchesPlayerSearch, nicknameKey } from '../types/player';
 import { fetchPlayers, upsertPlayer } from '../lib/playersApi';
 import PlayerProfileDialog from './PlayerProfileDialog';
 import { PlayerProfileSummary } from './PlayerProfileSummary';
-import PauperRecordFields from './tournament/PauperRecordFields';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { UserPlus } from 'lucide-react';
@@ -23,8 +21,6 @@ interface PlayerPickerSectionProps {
   disabledReason?: string;
   description?: string;
   showPauperFields?: boolean;
-  pauperRecord?: PauperRecord;
-  onPauperRecordChange?: (record: PauperRecord) => void;
   pointsDoubled?: boolean;
 }
 
@@ -35,8 +31,6 @@ export default function PlayerPickerSection({
   disabledReason,
   description = 'Ao digitar, aparecem jogadores já cadastrados — clique para adicionar. Nomes novos abrem o cadastro com nome completo obrigatório.',
   showPauperFields = false,
-  pauperRecord = DEFAULT_PAUPER_RECORD,
-  onPauperRecordChange,
   pointsDoubled = false,
 }: PlayerPickerSectionProps) {
   const [registry, setRegistry] = useState<PlayerProfile[]>([]);
@@ -48,7 +42,6 @@ export default function PlayerPickerSection({
   );
   const [requireFullName, setRequireFullName] = useState(false);
   const [playerName, setPlayerName] = useState('');
-  const [pauperFieldsKey, setPauperFieldsKey] = useState(0);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState<{
     top: number;
@@ -179,6 +172,7 @@ export default function PlayerPickerSection({
     nickname: string;
     fullName: string;
     companionNick: string;
+    pauperRecord?: PauperRecord;
   }) => {
     setDialogSaving(true);
     try {
@@ -196,16 +190,11 @@ export default function PlayerPickerSection({
         );
       });
 
-      await onAddFromProfile(
-        profile,
-        showPauperFields ? pauperRecord : undefined
-      );
+      await onAddFromProfile(profile, data.pauperRecord);
       setPlayerName('');
       setSuggestOpen(false);
       setRequireFullName(false);
       setDialogOpen(false);
-      onPauperRecordChange?.({ ...DEFAULT_PAUPER_RECORD });
-      setPauperFieldsKey((k) => k + 1);
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : 'Não foi possível salvar o jogador.'
@@ -223,6 +212,10 @@ export default function PlayerPickerSection({
     beginAddPlayer(profile.nickname);
   };
 
+  const pickerDescription = showPauperFields
+    ? 'Digite o apelido ou escolha da lista — o popup abre para confirmar cadastro e resultado Pauper.'
+    : description;
+
   return (
     <>
       <PlayerProfileDialog
@@ -233,9 +226,11 @@ export default function PlayerPickerSection({
         requireFullName={requireFullName}
         onConfirm={handleDialogConfirm}
         saving={dialogSaving}
+        showPauperFields={showPauperFields}
+        pointsDoubled={pointsDoubled}
       />
 
-      <p className="text-sm text-slate-400 mb-3">{description}</p>
+      <p className="text-sm text-slate-400 mb-3">{pickerDescription}</p>
 
       {disabled && disabledReason && (
         <p className="text-sm text-amber-400/90 mb-3 rounded-lg border border-amber-900/45 bg-amber-950/25 px-3 py-2">
@@ -243,12 +238,11 @@ export default function PlayerPickerSection({
         </p>
       )}
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div
-            ref={suggestContainerRef}
-            className="relative flex-1 min-w-0 w-full"
-          >
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div
+          ref={suggestContainerRef}
+          className="relative flex-1 min-w-0 w-full"
+        >
           <Input
             placeholder="Apelido do jogador"
             value={playerName}
@@ -333,21 +327,6 @@ export default function PlayerPickerSection({
           <UserPlus className="w-4 h-4 mr-2" />
           Adicionar
         </Button>
-        </div>
-        {showPauperFields && onPauperRecordChange && (
-          <div className="rounded-lg border border-slate-700/80 bg-slate-800/30 px-3 py-2.5">
-            <p className="text-xs text-slate-500 mb-2">
-              Resultado do jogador (V/D/E — um dígito cada, ex.: 2/0/1)
-            </p>
-            <PauperRecordFields
-              key={`picker-pauper-${pauperFieldsKey}`}
-              record={pauperRecord}
-              onChange={onPauperRecordChange}
-              pointsDoubled={pointsDoubled}
-              compact
-            />
-          </div>
-        )}
       </div>
     </>
   );

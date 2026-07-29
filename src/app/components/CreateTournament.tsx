@@ -57,9 +57,6 @@ export default function CreateTournament() {
   );
   const [includeFourthDoublesRound, setIncludeFourthDoublesRound] =
     useState(false);
-  const [pendingPauperRecord, setPendingPauperRecord] = useState({
-    ...DEFAULT_PAUPER_RECORD,
-  });
 
   const minPlayers = modality === 'doubles_cmd' ? 4 : modality === 'weekly_pauper' ? 1 : 3;
   const playerCountOk =
@@ -399,13 +396,6 @@ export default function CreateTournament() {
                 excludedPlayerIds={excludedPlayerIds}
                 onAddFromProfile={addPlayerFromProfile}
                 showPauperFields={isPauperModality(modality)}
-                pauperRecord={pendingPauperRecord}
-                onPauperRecordChange={setPendingPauperRecord}
-                description={
-                  isPauperModality(modality)
-                    ? 'Digite o apelido e, se quiser, já informe V/D/E e aproveitamento antes de adicionar.'
-                    : undefined
-                }
               />
             </div>
 

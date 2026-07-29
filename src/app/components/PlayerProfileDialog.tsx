@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { PlayerProfile } from '../types/player';
+import {
+  DEFAULT_PAUPER_RECORD,
+  normalizePauperRecord,
+  type PauperRecord,
+} from '../utils/pauperScoring';
+import PauperRecordFields from './tournament/PauperRecordFields';
 import { Button } from './ui/button';
 import {
   Dialog,
@@ -22,8 +28,11 @@ export interface PlayerProfileDialogProps {
     nickname: string;
     fullName: string;
     companionNick: string;
+    pauperRecord?: PauperRecord;
   }) => void | Promise<void>;
   saving?: boolean;
+  showPauperFields?: boolean;
+  pointsDoubled?: boolean;
 }
 
 export default function PlayerProfileDialog({
@@ -34,10 +43,16 @@ export default function PlayerProfileDialog({
   requireFullName,
   onConfirm,
   saving = false,
+  showPauperFields = false,
+  pointsDoubled = false,
 }: PlayerProfileDialogProps) {
   const [nickname, setNickname] = useState(initialNickname);
   const [fullName, setFullName] = useState('');
   const [companionNick, setCompanionNick] = useState('');
+  const [pauperRecord, setPauperRecord] = useState<PauperRecord>({
+    ...DEFAULT_PAUPER_RECORD,
+  });
+  const [pauperFieldsKey, setPauperFieldsKey] = useState(0);
 
   useEffect(() => {
     if (!open) {
@@ -46,6 +61,8 @@ export default function PlayerProfileDialog({
     setNickname(existing?.nickname ?? initialNickname);
     setFullName(existing?.fullName ?? '');
     setCompanionNick(existing?.companionNick ?? '');
+    setPauperRecord({ ...DEFAULT_PAUPER_RECORD });
+    setPauperFieldsKey((k) => k + 1);
   }, [open, initialNickname, existing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,13 +71,16 @@ export default function PlayerProfileDialog({
       nickname: nickname.trim(),
       fullName: fullName.trim(),
       companionNick: companionNick.trim(),
+      pauperRecord: showPauperFields
+        ? normalizePauperRecord(pauperRecord)
+        : undefined,
     });
   };
 
   const title = existing
     ? requireFullName
       ? 'Complete o cadastro do jogador'
-      : 'Editar jogador'
+      : 'Adicionar jogador'
     : 'Novo jogador';
 
   return (
@@ -82,9 +102,13 @@ export default function PlayerProfileDialog({
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              {requireFullName
-                ? 'O nome completo é obrigatório para identificar o jogador na liga mensal.'
-                : 'Você pode atualizar os dados antes de adicionar ao torneio.'}
+              {showPauperFields
+                ? requireFullName
+                  ? 'Cadastre o jogador e informe o resultado do torneio (V/D/E e aproveitamento).'
+                  : 'Confirme os dados e informe o resultado do torneio (V/D/E e aproveitamento).'
+                : requireFullName
+                  ? 'O nome completo é obrigatório para identificar o jogador na liga mensal.'
+                  : 'Você pode atualizar os dados antes de adicionar ao torneio.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -128,6 +152,22 @@ export default function PlayerProfileDialog({
                 autoComplete="off"
               />
             </div>
+            {showPauperFields && (
+              <div className="grid gap-2 rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-3">
+                <Label className="text-slate-300">Resultado Pauper</Label>
+                <p className="text-xs text-slate-500">
+                  V/D/E — um dígito cada (ex.: 2/0/1). Vitória = 3 pts, empate = 1
+                  pt.
+                </p>
+                <PauperRecordFields
+                  key={`dialog-pauper-${pauperFieldsKey}`}
+                  record={pauperRecord}
+                  onChange={setPauperRecord}
+                  pointsDoubled={pointsDoubled}
+                  compact
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>
