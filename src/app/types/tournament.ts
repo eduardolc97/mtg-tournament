@@ -1,4 +1,5 @@
 import type { TournamentModality } from '../constants/tournamentModality';
+import type { PauperRecord } from '../utils/pauperScoring';
 
 export interface Player {
   id: string;
@@ -7,6 +8,7 @@ export interface Player {
   fullName?: string | null;
   companionNick?: string | null;
   partnerId?: string;
+  pauperRecord?: PauperRecord;
 }
 
 export type TableOutcome =
@@ -43,6 +45,7 @@ export interface Tournament {
   leagueMonth: number;
   modality: TournamentModality;
   doublesIncludeFourthSwissRound?: boolean | null;
+  pointsDoubled?: boolean;
 }
 
 export interface PlayerStats {

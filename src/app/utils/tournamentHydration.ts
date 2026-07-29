@@ -1,9 +1,14 @@
 import type { Player, Round, Tournament } from '../types/tournament';
+import { normalizePauperRecord } from './pauperScoring';
 
 type ParticipantRow = {
   id: string;
   player_id: string;
   partner_id: string | null;
+  wins?: number | null;
+  losses?: number | null;
+  draws?: number | null;
+  performance_pct?: number | string | null;
   players: {
     id: string;
     nickname: string;
@@ -12,10 +17,27 @@ type ParticipantRow = {
   } | null;
 };
 
+function parsePerformancePct(raw: unknown): number | null {
+  if (raw === null || raw === undefined) {
+    return null;
+  }
+  const n = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
+  if (!Number.isFinite(n)) {
+    return null;
+  }
+  return Math.min(100, Math.max(0, n));
+}
+
 function participantToPlayer(row: ParticipantRow): Player | null {
   if (!row.players) {
     return null;
   }
+  const pauperRecord = normalizePauperRecord({
+    wins: row.wins ?? 0,
+    losses: row.losses ?? 0,
+    draws: row.draws ?? 0,
+    performancePct: parsePerformancePct(row.performance_pct),
+  });
   return {
     id: row.id,
     playerId: row.player_id,
@@ -23,6 +45,7 @@ function participantToPlayer(row: ParticipantRow): Player | null {
     fullName: row.players.full_name,
     companionNick: row.players.companion_nick,
     partnerId: row.partner_id ?? undefined,
+    pauperRecord,
   };
 }
 
@@ -77,3 +100,5 @@ export function hydrateTournament(
     rounds,
   };
 }
+
+export type { ParticipantRow };

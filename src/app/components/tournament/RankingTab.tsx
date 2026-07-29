@@ -5,6 +5,7 @@ import {
   calculateDoublesTeamStats,
   calculatePlayerStats,
   doublesTeamStatsAreTied,
+  formatTournamentRankingMessage,
   playerStatsAreTied,
 } from '../../utils/tournamentRanking';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -16,8 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
-import { Trophy, Crown, Users, Maximize2 } from 'lucide-react';
+import { Trophy, Crown, Users, Maximize2, Copy } from 'lucide-react';
 import { Button } from '../ui/button';
+import { toast } from 'sonner';
 import RankingPresentationDialog from './RankingPresentationDialog';
 
 interface RankingTabProps {
@@ -43,6 +45,16 @@ export default function RankingTab({ tournament }: RankingTabProps) {
   const empty =
     displayStats.length === 0 ||
     displayStats.every((s) => s.totalPoints === 0);
+
+  const handleCopyRanking = async () => {
+    const message = formatTournamentRankingMessage(tournament);
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success('Ranking copiado!');
+    } catch {
+      toast.error('Não foi possível copiar o ranking.');
+    }
+  };
 
   if (empty) {
     return (
@@ -88,16 +100,28 @@ export default function RankingTab({ tournament }: RankingTabProps) {
             )}
             {doubles ? 'Classificação por dupla' : 'Classificação geral'}
           </CardTitle>
+          <div className="ml-auto flex flex-wrap gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="ml-auto border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
+            className="border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
+            onClick={handleCopyRanking}
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            Copiar ranking
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
             onClick={() => setPresentationOpen(true)}
           >
             <Maximize2 className="mr-2 h-4 w-4" />
             Modo apresentação
           </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-0">

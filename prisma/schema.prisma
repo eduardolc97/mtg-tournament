@@ -16,6 +16,7 @@ model Tournament {
   leagueMonth                    Int                     @map("league_month")
   modality                       String                  @default("weekly_cmd100")
   doublesIncludeFourthSwissRound Boolean?                @map("doubles_include_fourth_swiss_round")
+  pointsDoubled                  Boolean                 @default(false) @map("points_doubled")
   participants                   TournamentParticipant[]
 
   @@map("tournaments")
@@ -35,10 +36,14 @@ model Player {
 }
 
 model TournamentParticipant {
-  id           String   @id @map("id")
-  tournamentId String   @map("tournament_id")
-  playerId     String   @map("player_id")
-  partnerId    String?  @map("partner_id")
+  id             String   @id @map("id")
+  tournamentId   String   @map("tournament_id")
+  playerId       String   @map("player_id")
+  partnerId      String?  @map("partner_id")
+  wins           Int      @default(0) @map("wins")
+  losses         Int      @default(0) @map("losses")
+  draws          Int      @default(0) @map("draws")
+  performancePct Decimal? @map("performance_pct") @db.Decimal(5, 2)
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   player     Player     @relation(fields: [playerId], references: [id])

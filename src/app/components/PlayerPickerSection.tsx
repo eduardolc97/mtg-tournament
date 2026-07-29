@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { PlayerProfile } from '../types/player';
+import type { PauperRecord } from '../utils/pauperScoring';
 import { matchesPlayerSearch, nicknameKey } from '../types/player';
 import { fetchPlayers, upsertPlayer } from '../lib/playersApi';
 import PlayerProfileDialog from './PlayerProfileDialog';
@@ -12,10 +13,15 @@ import { toast } from 'sonner';
 
 interface PlayerPickerSectionProps {
   excludedPlayerIds: Set<string>;
-  onAddFromProfile: (profile: PlayerProfile) => Promise<void>;
+  onAddFromProfile: (
+    profile: PlayerProfile,
+    pauperRecord?: PauperRecord
+  ) => Promise<void>;
   disabled?: boolean;
   disabledReason?: string;
   description?: string;
+  showPauperFields?: boolean;
+  pointsDoubled?: boolean;
 }
 
 export default function PlayerPickerSection({
@@ -24,6 +30,8 @@ export default function PlayerPickerSection({
   disabled = false,
   disabledReason,
   description = 'Ao digitar, aparecem jogadores já cadastrados — clique para adicionar. Nomes novos abrem o cadastro com nome completo obrigatório.',
+  showPauperFields = false,
+  pointsDoubled = false,
 }: PlayerPickerSectionProps) {
   const [registry, setRegistry] = useState<PlayerProfile[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -164,6 +172,7 @@ export default function PlayerPickerSection({
     nickname: string;
     fullName: string;
     companionNick: string;
+    pauperRecord?: PauperRecord;
   }) => {
     setDialogSaving(true);
     try {
@@ -181,7 +190,7 @@ export default function PlayerPickerSection({
         );
       });
 
-      await onAddFromProfile(profile);
+      await onAddFromProfile(profile, data.pauperRecord);
       setPlayerName('');
       setSuggestOpen(false);
       setRequireFullName(false);
@@ -203,6 +212,10 @@ export default function PlayerPickerSection({
     beginAddPlayer(profile.nickname);
   };
 
+  const pickerDescription = showPauperFields
+    ? 'Digite o apelido ou escolha da lista — o popup abre para confirmar cadastro e resultado Pauper.'
+    : description;
+
   return (
     <>
       <PlayerProfileDialog
@@ -213,9 +226,11 @@ export default function PlayerPickerSection({
         requireFullName={requireFullName}
         onConfirm={handleDialogConfirm}
         saving={dialogSaving}
+        showPauperFields={showPauperFields}
+        pointsDoubled={pointsDoubled}
       />
 
-      <p className="text-sm text-slate-400 mb-3">{description}</p>
+      <p className="text-sm text-slate-400 mb-3">{pickerDescription}</p>
 
       {disabled && disabledReason && (
         <p className="text-sm text-amber-400/90 mb-3 rounded-lg border border-amber-900/45 bg-amber-950/25 px-3 py-2">

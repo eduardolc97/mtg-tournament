@@ -1,20 +1,43 @@
 import { useParams, useNavigate } from 'react-router';
+import { useState } from 'react';
 import { useTournaments } from '../context/TournamentContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { ArrowLeft, Trophy, Users, Target, Loader2, Calendar } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
+import {
+  ArrowLeft,
+  Trophy,
+  Users,
+  Target,
+  Loader2,
+  Calendar,
+  Sparkles,
+} from 'lucide-react';
 import PageHeaderBrand from './PageHeaderBrand';
 import {
   normalizeTournamentModality,
   tournamentModalityLabelPt,
+  isPauperModality,
 } from '../constants/tournamentModality';
 import { monthLabel } from '../utils/monthlyLeague';
 import PlayersTab from './tournament/PlayersTab';
 import RoundsTab from './tournament/RoundsTab';
 import RankingTab from './tournament/RankingTab';
+import PauperPlayersTab from './tournament/PauperPlayersTab';
+import PauperRankingTab from './tournament/PauperRankingTab';
 import CurrentRoundIndicator from './tournament/CurrentRoundIndicator';
 import RoundCountdownTimer from './tournament/RoundCountdownTimer';
+import { toast } from 'sonner';
 
 export default function TournamentView() {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +49,12 @@ export default function TournamentView() {
     removePlayerFromTournament,
     generateTournamentRounds,
     regenerateTournamentRounds,
+    updateAllPauperRecords,
+    togglePointsDoubled,
   } = useTournaments();
+
+  const [doubleDialogOpen, setDoubleDialogOpen] = useState(false);
+  const [doubleToggling, setDoubleToggling] = useState(false);
 
   const tournament = getTournamentById(id!);
 
@@ -57,6 +85,25 @@ export default function TournamentView() {
   }
 
   const modality = normalizeTournamentModality(tournament.modality);
+  const isPauper = isPauperModality(modality);
+  const pointsDoubled = tournament.pointsDoubled === true;
+
+  const handleConfirmDoubleToggle = async () => {
+    setDoubleToggling(true);
+    try {
+      await togglePointsDoubled(tournament.id, !pointsDoubled);
+      toast.success(
+        !pointsDoubled
+          ? 'Pontos dobrados ativados para este torneio.'
+          : 'Pontos dobrados desativados.'
+      );
+      setDoubleDialogOpen(false);
+    } catch {
+      toast.error('Não foi possível alterar os pontos dobrados.');
+    } finally {
+      setDoubleToggling(false);
+    }
+  };
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900">
@@ -82,18 +129,25 @@ export default function TournamentView() {
               <Users className="w-4 h-4 text-blue-400 shrink-0" />
               <span>{tournament.players.length} jogadores</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-purple-400 shrink-0" />
-              <span>
-                {tournament.rounds.length} rodada
-                {tournament.rounds.length !== 1 ? 's' : ''}
-                {modality === 'doubles_cmd' ? ' (2×2)' : ''}
-              </span>
-            </div>
+            {!isPauper && (
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-purple-400 shrink-0" />
+                <span>
+                  {tournament.rounds.length} rodada
+                  {tournament.rounds.length !== 1 ? 's' : ''}
+                  {modality === 'doubles_cmd' ? ' (2×2)' : ''}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <span className="text-purple-300/90">
                 {tournamentModalityLabelPt(modality)}
               </span>
+              {isPauper && pointsDoubled && (
+                <span className="text-amber-400 text-xs border border-amber-500/40 rounded px-1.5 py-0.5">
+                  2× pontos
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-amber-400 shrink-0" />
@@ -102,16 +156,33 @@ export default function TournamentView() {
               </span>
             </div>
           </div>
+
+          {isPauper && (
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant={pointsDoubled ? 'default' : 'outline'}
+                size="sm"
+                className={
+                  pointsDoubled
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                    : 'border-amber-500/50 text-amber-200 hover:bg-amber-950/40 hover:text-white'
+                }
+                onClick={() => setDoubleDialogOpen(true)}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {pointsDoubled ? 'Pontos dobrados (ativo)' : 'Ativar pontos dobrados'}
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Current Round Indicator */}
-        {tournament.rounds.length > 0 && (
+        {!isPauper && tournament.rounds.length > 0 && (
           <CurrentRoundIndicator tournament={tournament} />
         )}
-        <RoundCountdownTimer />
+        {!isPauper && <RoundCountdownTimer />}
 
-        {/* Tabs */}
-        <Tabs defaultValue="rounds" className="w-full min-h-0">
+        <Tabs defaultValue={isPauper ? 'players' : 'rounds'} className="w-full min-h-0">
           <TabsList className="bg-slate-900/50 border border-purple-900/50 backdrop-blur mb-4 sm:mb-6 w-full max-w-full inline-flex flex-nowrap overflow-x-auto justify-start h-auto p-1 gap-0.5 sm:w-auto sm:justify-center [@media(orientation:landscape)_and_(max-height:500px)]:mb-3">
             <TabsTrigger
               value="players"
@@ -120,13 +191,15 @@ export default function TournamentView() {
               <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" />
               Jogadores
             </TabsTrigger>
-            <TabsTrigger
-              value="rounds"
-              className="shrink-0 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 [@media(orientation:landscape)_and_(max-height:500px)]:py-1.5"
-            >
-              <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" />
-              Rodadas
-            </TabsTrigger>
+            {!isPauper && (
+              <TabsTrigger
+                value="rounds"
+                className="shrink-0 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 [@media(orientation:landscape)_and_(max-height:500px)]:py-1.5"
+              >
+                <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" />
+                Rodadas
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="ranking"
               className="shrink-0 data-[state=active]:bg-purple-600 data-[state=active]:text-white text-xs sm:text-sm px-2.5 sm:px-3 [@media(orientation:landscape)_and_(max-height:500px)]:py-1.5"
@@ -137,33 +210,78 @@ export default function TournamentView() {
           </TabsList>
 
           <TabsContent value="players">
-            <PlayersTab
-              tournament={tournament}
-              modality={modality}
-              onAddPlayer={addPlayerToTournament}
-              onRemovePlayer={removePlayerFromTournament}
-            />
+            {isPauper ? (
+              <PauperPlayersTab
+                tournament={tournament}
+                onAddPlayer={addPlayerToTournament}
+                onRemovePlayer={removePlayerFromTournament}
+                onUpdateAllRecords={updateAllPauperRecords}
+              />
+            ) : (
+              <PlayersTab
+                tournament={tournament}
+                modality={modality}
+                onAddPlayer={addPlayerToTournament}
+                onRemovePlayer={removePlayerFromTournament}
+              />
+            )}
           </TabsContent>
 
-          <TabsContent value="rounds">
-            <RoundsTab
-              tournament={tournament}
-              onGenerateRounds={
-                modality === 'doubles_cmd' ? undefined : generateTournamentRounds
-              }
-              onRegenerateRounds={
-                modality === 'doubles_cmd'
-                  ? undefined
-                  : regenerateTournamentRounds
-              }
-            />
-          </TabsContent>
+          {!isPauper && (
+            <TabsContent value="rounds">
+              <RoundsTab
+                tournament={tournament}
+                onGenerateRounds={
+                  modality === 'doubles_cmd' ? undefined : generateTournamentRounds
+                }
+                onRegenerateRounds={
+                  modality === 'doubles_cmd'
+                    ? undefined
+                    : regenerateTournamentRounds
+                }
+              />
+            </TabsContent>
+          )}
 
           <TabsContent value="ranking">
-            <RankingTab tournament={tournament} />
+            {isPauper ? (
+              <PauperRankingTab tournament={tournament} />
+            ) : (
+              <RankingTab tournament={tournament} />
+            )}
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={doubleDialogOpen} onOpenChange={setDoubleDialogOpen}>
+        <AlertDialogContent className="bg-slate-900 border-slate-700 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pointsDoubled ? 'Desativar pontos dobrados?' : 'Ativar pontos dobrados?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              {pointsDoubled
+                ? 'Os pontos de todos os jogadores voltarão ao valor normal (V×3 + E×1).'
+                : 'Todos os pontos deste torneio serão multiplicados por 2 na liga e no ranking.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={doubleToggling}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirmDoubleToggle();
+              }}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {doubleToggling ? 'Salvando…' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

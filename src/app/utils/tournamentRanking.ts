@@ -3,6 +3,7 @@ import type {
   Tournament,
   PlayerStats,
 } from '../types/tournament';
+import { normalizeTournamentModality } from '../constants/tournamentModality';
 import { getDoublesTeamsFromPlayers } from './doublesRoundGenerator';
 import { pairKey } from './roundGenerator';
 import { TABLE_FIRST_PLACE_POINTS } from './scoring';
@@ -360,4 +361,52 @@ export function groupByCompetitionRank<T extends { totalPoints: number }>(
   }
 
   return groups;
+}
+
+const RANKING_COPY_SEPARATOR = '━━━━━━━━━━━━━━━━';
+const PODIUM_MEDALS = ['🥇', '🥈', '🥉'] as const;
+
+function formatRankedListMessage(
+  title: string,
+  ranked: Array<{ name: string; totalPoints: number }>
+): string {
+  if (ranked.length === 0) {
+    return `🏆 RANKING — ${title}\n\nNenhum resultado registrado ainda.`;
+  }
+
+  const lines: string[] = [`🏆 RANKING — ${title}`, ''];
+
+  const podiumCount = Math.min(3, ranked.length);
+  for (let i = 0; i < podiumCount; i++) {
+    const row = ranked[i];
+    lines.push(`${PODIUM_MEDALS[i]} ${i + 1}º Lugar`);
+    lines.push(`${row.name} — ${row.totalPoints} pts`);
+    lines.push('');
+  }
+
+  if (ranked.length > 3) {
+    lines.push(RANKING_COPY_SEPARATOR);
+    for (let i = 3; i < ranked.length; i++) {
+      const row = ranked[i];
+      lines.push(`${i + 1}° ${row.name} — ${row.totalPoints} pts`);
+    }
+  }
+
+  return lines.join('\n').trimEnd();
+}
+
+export function formatTournamentRankingMessage(tournament: Tournament): string {
+  const title = tournament.name.toUpperCase();
+
+  if (normalizeTournamentModality(tournament.modality) === 'doubles_cmd') {
+    const ranked = calculateDoublesTeamStats(tournament)
+      .filter((s) => s.totalPoints > 0)
+      .map((s) => ({ name: s.label, totalPoints: s.totalPoints }));
+    return formatRankedListMessage(title, ranked);
+  }
+
+  const ranked = calculatePlayerStats(tournament)
+    .filter((s) => s.totalPoints > 0)
+    .map((s) => ({ name: s.playerName, totalPoints: s.totalPoints }));
+  return formatRankedListMessage(title, ranked);
 }

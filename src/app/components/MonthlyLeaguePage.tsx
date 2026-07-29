@@ -80,17 +80,6 @@ export default function MonthlyLeaguePage() {
     [tournaments, year, month]
   );
 
-  const excludedFromLeagueCount = useMemo(
-    () =>
-      tournaments.filter(
-        (t) =>
-          t.leagueYear === year &&
-          t.leagueMonth === month &&
-          !countsTowardMonthlyLeague(t.modality)
-      ).length,
-    [tournaments, year, month]
-  );
-
   const setPeriod = (y: number, m: number) => {
     setSearchParams({ year: String(y), month: String(m) });
   };
@@ -121,7 +110,7 @@ export default function MonthlyLeaguePage() {
 
         <PageHeaderBrand variant="league" className="mb-2">
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Liga mensal
+            Liga CMD100
           </h1>
         </PageHeaderBrand>
         <p className="text-slate-400 text-sm mb-6 max-w-xl">
@@ -195,25 +184,12 @@ export default function MonthlyLeaguePage() {
           </Card>
         ) : eventCount === 0 ? (
           <Card className="bg-slate-900/50 border-purple-900/50">
-            <CardContent className="py-12 text-center text-slate-400 space-y-2">
-              {excludedFromLeagueCount > 0 ? (
-                <>
-                  <p>
-                    Há {excludedFromLeagueCount} campeonato
-                    {excludedFromLeagueCount !== 1 ? 's' : ''} em{' '}
-                    {monthLabel(year, month)}, mas nenhum na modalidade Liga CMD
-                    100 semanal — por isso a liga mensal está vazia.
-                  </p>
-                  <p className="text-slate-500 text-sm">
-                    Duplas e mesão livre não contam para esta classificação.
-                  </p>
-                </>
-              ) : (
-                <p>
-                  Nenhum campeonato em {monthLabel(year, month)}. Crie um torneio
-                  escolhendo esse mês e ano.
-                </p>
-              )}
+            <CardContent className="py-12 text-center text-slate-400">
+              <p>
+                Nenhum campeonato Liga CMD 100 semanal em{' '}
+                {monthLabel(year, month)}. Crie um torneio escolhendo essa
+                modalidade, mês e ano.
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -233,13 +209,6 @@ export default function MonthlyLeaguePage() {
                   <span className="text-sm font-normal text-slate-400 text-right">
                     {eventCount} campeonato{eventCount !== 1 ? 's' : ''} (Liga CMD
                     100 semanal)
-                    {excludedFromLeagueCount > 0 ? (
-                      <span className="block text-slate-500 mt-1">
-                        +{excludedFromLeagueCount} outro
-                        {excludedFromLeagueCount !== 1 ? 's' : ''} no mês (fora da
-                        liga)
-                      </span>
-                    ) : null}
                   </span>
                 </CardTitle>
                 {rows.length > 0 && (

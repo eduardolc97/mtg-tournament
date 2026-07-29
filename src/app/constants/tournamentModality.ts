@@ -1,7 +1,8 @@
 export type TournamentModality =
   | 'weekly_cmd100'
   | 'doubles_cmd'
-  | 'cmd_open_table';
+  | 'cmd_open_table'
+  | 'weekly_pauper';
 
 export const DEFAULT_TOURNAMENT_MODALITY: TournamentModality = 'weekly_cmd100';
 
@@ -9,15 +10,24 @@ export const TOURNAMENT_MODALITIES: readonly TournamentModality[] = [
   'weekly_cmd100',
   'doubles_cmd',
   'cmd_open_table',
+  'weekly_pauper',
 ] as const;
 
 export function normalizeTournamentModality(
   raw: unknown
 ): TournamentModality {
-  if (raw === 'doubles_cmd' || raw === 'cmd_open_table') {
+  if (
+    raw === 'doubles_cmd' ||
+    raw === 'cmd_open_table' ||
+    raw === 'weekly_pauper'
+  ) {
     return raw;
   }
   return DEFAULT_TOURNAMENT_MODALITY;
+}
+
+export function isPauperModality(modality: TournamentModality): boolean {
+  return modality === 'weekly_pauper';
 }
 
 export function countsTowardMonthlyLeague(
@@ -26,11 +36,20 @@ export function countsTowardMonthlyLeague(
   return modality === 'weekly_cmd100';
 }
 
+export function countsTowardPauperLeague(
+  modality: TournamentModality
+): boolean {
+  return modality === 'weekly_pauper';
+}
+
 export function expectedSwissRoundCount(
   modality: TournamentModality,
   playerCount: number,
   doublesIncludeFourthSwissRound?: boolean | null
 ): number {
+  if (modality === 'weekly_pauper') {
+    return 0;
+  }
   if (modality === 'doubles_cmd') {
     const duplas = playerCount / 2;
     if (duplas < 8) {
@@ -46,6 +65,9 @@ export function plannedTotalRounds(
   playerCount: number,
   doublesIncludeFourthSwissRound?: boolean | null
 ): number {
+  if (modality === 'weekly_pauper') {
+    return 0;
+  }
   const swiss = expectedSwissRoundCount(
     modality,
     playerCount,
@@ -67,6 +89,8 @@ export function tournamentModalityLabelPt(
       return 'CMD em duplas';
     case 'cmd_open_table':
       return 'CMD mesão livre';
+    case 'weekly_pauper':
+      return 'Liga Pauper semanal';
     default:
       return 'Liga CMD 100 semanal';
   }
