@@ -1,9 +1,19 @@
+import { useState } from 'react';
 import { Input } from '../ui/input';
 import {
   computePauperTournamentPoints,
   normalizePauperRecord,
   type PauperRecord,
 } from '../../utils/pauperScoring';
+import {
+  applyPauperRecordMaskInput,
+  applyPerformanceMaskInput,
+  formatPauperRecordMask,
+  formatPerformanceMask,
+  mergePauperRecordFromMasks,
+  PAUPER_PERFORMANCE_PLACEHOLDER,
+  PAUPER_RECORD_MASK_PLACEHOLDER,
+} from '../../utils/pauperRecordMask';
 
 interface PauperRecordFieldsProps {
   record: PauperRecord;
@@ -11,25 +21,7 @@ interface PauperRecordFieldsProps {
   pointsDoubled?: boolean;
   disabled?: boolean;
   showPoints?: boolean;
-}
-
-function parseNonNegativeInt(value: string): number {
-  const n = parseInt(value, 10);
-  if (!Number.isFinite(n) || n < 0) {
-    return 0;
-  }
-  return n;
-}
-
-function parsePerformanceInput(value: string): number | null {
-  if (value.trim() === '') {
-    return null;
-  }
-  const n = parseFloat(value.replace(',', '.'));
-  if (!Number.isFinite(n)) {
-    return null;
-  }
-  return Math.min(100, Math.max(0, n));
+  compact?: boolean;
 }
 
 export default function PauperRecordFields({
@@ -38,75 +30,79 @@ export default function PauperRecordFields({
   pointsDoubled = false,
   disabled = false,
   showPoints = true,
+  compact = false,
 }: PauperRecordFieldsProps) {
   const normalized = normalizePauperRecord(record);
   const points = computePauperTournamentPoints(normalized, pointsDoubled);
 
-  const update = (patch: Partial<PauperRecord>) => {
-    onChange(normalizePauperRecord({ ...normalized, ...patch }));
+  const [recordMask, setRecordMask] = useState(() =>
+    formatPauperRecordMask(normalized)
+  );
+  const [performanceMask, setPerformanceMask] = useState(() =>
+    formatPerformanceMask(normalized)
+  );
+
+  const emitChange = (nextRecordMask: string, nextPerformanceMask: string) => {
+    onChange(mergePauperRecordFromMasks(nextRecordMask, nextPerformanceMask));
   };
 
-  const inputClass =
-    'h-9 w-14 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1';
+  const recordInputClass = compact
+    ? 'h-9 w-[5.5rem] bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-2 font-mono tracking-wider'
+    : 'h-9 w-24 sm:w-28 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-2 font-mono text-lg tracking-wider';
+
+  const pctInputClass = compact
+    ? 'h-9 w-14 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1'
+    : 'h-9 w-16 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1';
 
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       <label className="flex items-center gap-1.5 text-xs text-slate-400">
-        <span className="w-3 text-center">V</span>
+        <span className="whitespace-nowrap">V/D/E</span>
         <Input
-          type="number"
-          min={0}
+          type="text"
           inputMode="numeric"
           disabled={disabled}
-          value={normalized.wins}
-          onChange={(e) => update({ wins: parseNonNegativeInt(e.target.value) })}
-          className={inputClass}
-          aria-label="Vitórias"
+          value={recordMask}
+          placeholder={PAUPER_RECORD_MASK_PLACEHOLDER}
+          maxLength={5}
+          onChange={(e) => {
+            const masked = applyPauperRecordMaskInput(e.target.value);
+            setRecordMask(masked);
+            emitChange(masked, performanceMask);
+          }}
+          onBlur={() => {
+            if (recordMask.endsWith('/')) {
+              const trimmed = recordMask.slice(0, -1);
+              setRecordMask(trimmed);
+              emitChange(trimmed, performanceMask);
+            }
+          }}
+          className={recordInputClass}
+          aria-label="Vitórias, derrotas e empates no formato V/D/E"
         />
       </label>
       <label className="flex items-center gap-1.5 text-xs text-slate-400">
-        <span className="w-3 text-center">D</span>
-        <Input
-          type="number"
-          min={0}
-          inputMode="numeric"
-          disabled={disabled}
-          value={normalized.losses}
-          onChange={(e) => update({ losses: parseNonNegativeInt(e.target.value) })}
-          className={inputClass}
-          aria-label="Derrotas"
-        />
-      </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-400">
-        <span className="w-3 text-center">E</span>
-        <Input
-          type="number"
-          min={0}
-          inputMode="numeric"
-          disabled={disabled}
-          value={normalized.draws}
-          onChange={(e) => update({ draws: parseNonNegativeInt(e.target.value) })}
-          className={inputClass}
-          aria-label="Empates"
-        />
-      </label>
-      <label className="flex items-center gap-1.5 text-xs text-slate-400">
-        <span className="whitespace-nowrap">Aprov.%</span>
-        <Input
-          type="number"
-          min={0}
-          max={100}
-          step={0.01}
-          inputMode="decimal"
-          disabled={disabled}
-          value={normalized.performancePct ?? ''}
-          placeholder="0"
-          onChange={(e) =>
-            update({ performancePct: parsePerformanceInput(e.target.value) })
-          }
-          className="h-9 w-16 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1"
-          aria-label="Aproveitamento percentual"
-        />
+        <span className="whitespace-nowrap">Aprov.</span>
+        <div className="relative">
+          <Input
+            type="text"
+            inputMode="numeric"
+            disabled={disabled}
+            value={performanceMask}
+            placeholder={PAUPER_PERFORMANCE_PLACEHOLDER}
+            maxLength={3}
+            onChange={(e) => {
+              const masked = applyPerformanceMaskInput(e.target.value);
+              setPerformanceMask(masked);
+              emitChange(recordMask, masked);
+            }}
+            className={`${pctInputClass} pr-5`}
+            aria-label="Aproveitamento percentual"
+          />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+            %
+          </span>
+        </div>
       </label>
       {showPoints && (
         <span className="text-sm font-semibold tabular-nums text-purple-300 ml-1">

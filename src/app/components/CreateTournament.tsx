@@ -57,6 +57,9 @@ export default function CreateTournament() {
   );
   const [includeFourthDoublesRound, setIncludeFourthDoublesRound] =
     useState(false);
+  const [pendingPauperRecord, setPendingPauperRecord] = useState({
+    ...DEFAULT_PAUPER_RECORD,
+  });
 
   const minPlayers = modality === 'doubles_cmd' ? 4 : modality === 'weekly_pauper' ? 1 : 3;
   const playerCountOk =
@@ -64,7 +67,10 @@ export default function CreateTournament() {
       ? isValidDoublesPlayerCount(players.length)
       : isValidTournamentPlayerCount(players.length);
 
-  const addPlayerFromProfile = async (profile: PlayerProfile) => {
+  const addPlayerFromProfile = async (
+    profile: PlayerProfile,
+    pauperRecord?: typeof DEFAULT_PAUPER_RECORD
+  ) => {
     if (players.some((p) => p.playerId === profile.id)) {
       throw new Error('Jogador já adicionado');
     }
@@ -76,7 +82,7 @@ export default function CreateTournament() {
       fullName: profile.fullName,
       companionNick: profile.companionNick,
       pauperRecord: isPauperModality(modality)
-        ? { ...DEFAULT_PAUPER_RECORD }
+        ? normalizePauperRecord(pauperRecord ?? DEFAULT_PAUPER_RECORD)
         : undefined,
     };
 
@@ -392,6 +398,14 @@ export default function CreateTournament() {
               <PlayerPickerSection
                 excludedPlayerIds={excludedPlayerIds}
                 onAddFromProfile={addPlayerFromProfile}
+                showPauperFields={isPauperModality(modality)}
+                pauperRecord={pendingPauperRecord}
+                onPauperRecordChange={setPendingPauperRecord}
+                description={
+                  isPauperModality(modality)
+                    ? 'Digite o apelido e, se quiser, já informe V/D/E e aproveitamento antes de adicionar.'
+                    : undefined
+                }
               />
             </div>
 

@@ -12,6 +12,8 @@ export const DEFAULT_PAUPER_RECORD: PauperRecord = {
   performancePct: null,
 };
 
+const MAX_PAUPER_DIGIT = 9;
+
 export function computePauperBasePoints(record: Pick<PauperRecord, 'wins' | 'draws'>): number {
   return record.wins * 3 + record.draws * 1;
 }
@@ -27,9 +29,9 @@ export function computePauperTournamentPoints(
 export function normalizePauperRecord(
   raw: Partial<PauperRecord> | null | undefined
 ): PauperRecord {
-  const wins = Math.max(0, Math.floor(raw?.wins ?? 0));
-  const losses = Math.max(0, Math.floor(raw?.losses ?? 0));
-  const draws = Math.max(0, Math.floor(raw?.draws ?? 0));
+  const wins = Math.min(MAX_PAUPER_DIGIT, Math.max(0, Math.floor(raw?.wins ?? 0)));
+  const losses = Math.min(MAX_PAUPER_DIGIT, Math.max(0, Math.floor(raw?.losses ?? 0)));
+  const draws = Math.min(MAX_PAUPER_DIGIT, Math.max(0, Math.floor(raw?.draws ?? 0)));
   const pct = raw?.performancePct;
   let performancePct: number | null = null;
   if (typeof pct === 'number' && Number.isFinite(pct)) {

@@ -15,13 +15,22 @@ import PauperRecordFields from './PauperRecordFields';
 
 interface PauperPlayersTabProps {
   tournament: Tournament;
-  onAddPlayer: (tournamentId: string, profile: PlayerProfile) => Promise<void>;
+  onAddPlayer: (
+    tournamentId: string,
+    profile: PlayerProfile,
+    pauperRecord?: PauperRecord
+  ) => Promise<void>;
   onRemovePlayer: (tournamentId: string, entryId: string) => Promise<void>;
   onUpdateRecord: (
     tournamentId: string,
     entryId: string,
     record: PauperRecord
   ) => Promise<void>;
+}
+
+function recordResetKey(record: PauperRecord): string {
+  const n = normalizePauperRecord(record);
+  return `${n.wins}-${n.losses}-${n.draws}-${n.performancePct ?? 'x'}`;
 }
 
 export default function PauperPlayersTab({
@@ -32,6 +41,9 @@ export default function PauperPlayersTab({
 }: PauperPlayersTabProps) {
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, PauperRecord>>({});
+  const [pendingPauperRecord, setPendingPauperRecord] = useState<PauperRecord>({
+    ...DEFAULT_PAUPER_RECORD,
+  });
 
   const excludedPlayerIds = useMemo(
     () => new Set(tournament.players.map((p) => p.playerId)),
@@ -50,9 +62,16 @@ export default function PauperPlayersTab({
     [drafts]
   );
 
-  const handleAddFromProfile = async (profile: PlayerProfile) => {
+  const handleAddFromProfile = async (
+    profile: PlayerProfile,
+    pauperRecord?: PauperRecord
+  ) => {
     try {
-      await onAddPlayer(tournament.id, profile);
+      await onAddPlayer(
+        tournament.id,
+        profile,
+        normalizePauperRecord(pauperRecord ?? DEFAULT_PAUPER_RECORD)
+      );
       toast.success(`${profile.nickname} adicionado ao campeonato!`);
     } catch (e) {
       toast.error(
@@ -78,10 +97,7 @@ export default function PauperPlayersTab({
     }
   };
 
-  const handleSaveRecord = async (
-    entryId: string,
-    record: PauperRecord
-  ) => {
+  const handleSaveRecord = async (entryId: string, record: PauperRecord) => {
     setSavingEntryId(entryId);
     try {
       const normalized = normalizePauperRecord(record);
@@ -114,6 +130,11 @@ export default function PauperPlayersTab({
           <PlayerPickerSection
             excludedPlayerIds={excludedPlayerIds}
             onAddFromProfile={handleAddFromProfile}
+            showPauperFields
+            pauperRecord={pendingPauperRecord}
+            onPauperRecordChange={setPendingPauperRecord}
+            pointsDoubled={pointsDoubled}
+            description="Digite o apelido e, se quiser, já informe V/D/E e aproveitamento antes de adicionar."
           />
         </CardContent>
       </Card>
@@ -167,6 +188,7 @@ export default function PauperPlayersTab({
                     </div>
                     <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <PauperRecordFields
+                        key={`${player.id}-${recordResetKey(saved)}`}
                         record={draft}
                         pointsDoubled={pointsDoubled}
                         onChange={(record) =>

@@ -40,7 +40,8 @@ interface TournamentContextType {
   updateTournament: (id: string, tournament: Tournament) => Promise<void>;
   addPlayerToTournament: (
     tournamentId: string,
-    profile: PlayerProfile
+    profile: PlayerProfile,
+    pauperRecord?: PauperRecord
   ) => Promise<void>;
   removePlayerFromTournament: (
     tournamentId: string,
@@ -213,7 +214,8 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
 
   const addPlayerToTournament = async (
     tournamentId: string,
-    profile: PlayerProfile
+    profile: PlayerProfile,
+    pauperRecord?: PauperRecord
   ) => {
     const current = tournaments.find((t) => t.id === tournamentId);
     if (!current) {
@@ -222,14 +224,17 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     if (current.players.some((p) => p.playerId === profile.id)) {
       throw new Error('Jogador já adicionado');
     }
+    const isPauper = isPauperModality(
+      normalizeTournamentModality(current.modality)
+    );
     const entry: Player = {
       id: createEntryId(),
       playerId: profile.id,
       name: profile.nickname,
       fullName: profile.fullName,
       companionNick: profile.companionNick,
-      pauperRecord: isPauperModality(normalizeTournamentModality(current.modality))
-        ? { ...DEFAULT_PAUPER_RECORD }
+      pauperRecord: isPauper
+        ? normalizePauperRecord(pauperRecord ?? DEFAULT_PAUPER_RECORD)
         : undefined,
     };
     const saved = await addPlayerToTournamentApi(current, entry);
