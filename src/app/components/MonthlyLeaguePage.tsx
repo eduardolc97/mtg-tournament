@@ -121,7 +121,7 @@ export default function MonthlyLeaguePage() {
 
         <PageHeaderBrand variant="league" className="mb-2">
           <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Liga mensal
+            Liga CMD100
           </h1>
         </PageHeaderBrand>
         <p className="text-slate-400 text-sm mb-6 max-w-xl">

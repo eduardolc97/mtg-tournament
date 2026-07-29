@@ -5,6 +5,7 @@ import { Player, Tournament } from '../types/tournament';
 import type { PlayerProfile } from '../types/player';
 import {
   DEFAULT_TOURNAMENT_MODALITY,
+  isPauperModality,
   type TournamentModality,
 } from '../constants/tournamentModality';
 import { LEAGUE_MONTHS_PT, leagueYearOptions } from '../constants/leaguePeriod';
@@ -14,6 +15,11 @@ import {
 } from '../utils/doublesRoundGenerator';
 import { createEntryId } from '../utils/lateJoinPlayer';
 import { isValidTournamentPlayerCount } from '../utils/roundGenerator';
+import {
+  DEFAULT_PAUPER_RECORD,
+  normalizePauperRecord,
+} from '../utils/pauperScoring';
+import PauperRecordFields from './tournament/PauperRecordFields';
 import PlayerPickerSection from './PlayerPickerSection';
 import { PlayerProfileSummary } from './PlayerProfileSummary';
 import { Button } from './ui/button';
@@ -52,7 +58,7 @@ export default function CreateTournament() {
   const [includeFourthDoublesRound, setIncludeFourthDoublesRound] =
     useState(false);
 
-  const minPlayers = modality === 'doubles_cmd' ? 4 : 3;
+  const minPlayers = modality === 'doubles_cmd' ? 4 : modality === 'weekly_pauper' ? 1 : 3;
   const playerCountOk =
     modality === 'doubles_cmd'
       ? isValidDoublesPlayerCount(players.length)
@@ -69,6 +75,9 @@ export default function CreateTournament() {
       name: profile.nickname,
       fullName: profile.fullName,
       companionNick: profile.companionNick,
+      pauperRecord: isPauperModality(modality)
+        ? { ...DEFAULT_PAUPER_RECORD }
+        : undefined,
     };
 
     setPlayers((prev) => [...prev, entry]);
@@ -77,6 +86,16 @@ export default function CreateTournament() {
 
   const handleRemovePlayer = (entryId: string) => {
     setPlayers(players.filter((p) => p.id !== entryId));
+  };
+
+  const handleUpdatePauperRecord = (entryId: string, record: ReturnType<typeof normalizePauperRecord>) => {
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.id === entryId
+          ? { ...p, pauperRecord: normalizePauperRecord(record) }
+          : p
+      )
+    );
   };
 
   const handleCreateTournament = async () => {
@@ -128,6 +147,7 @@ export default function CreateTournament() {
       modality,
       doublesIncludeFourthSwissRound:
         modality === 'doubles_cmd' ? includeFourthDoublesRound : null,
+      pointsDoubled: false,
     };
 
     try {
@@ -204,6 +224,12 @@ export default function CreateTournament() {
                 >
                   CMD mesão livre
                 </SelectItem>
+                <SelectItem
+                  value="weekly_pauper"
+                  className="text-white focus:bg-purple-600/35"
+                >
+                  Liga Pauper semanal
+                </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-sm text-slate-400">
@@ -228,6 +254,13 @@ export default function CreateTournament() {
                 <>
                   Mesmas regras e pontuação da Liga CMD 100 semanal; apenas o
                   rótulo do evento é “mesão livre”.
+                </>
+              )}
+              {modality === 'weekly_pauper' && (
+                <>
+                  Torneio x1 sem mesas nem rodadas. Registre vitórias, derrotas,
+                  empates e aproveitamento por jogador. Vitória = 3 pts, empate =
+                  1 pt, derrota = 0. Entra na Liga Pauper mensal.
                 </>
               )}
             </p>
@@ -280,13 +313,18 @@ export default function CreateTournament() {
               {modality === 'weekly_cmd100' ? (
                 <>
                   Este campeonato entra na classificação geral deste mês para
-                  prêmios da liga.
+                  prêmios da liga CMD100.
+                </>
+              ) : modality === 'weekly_pauper' ? (
+                <>
+                  Este campeonato entra na{' '}
+                  <span className="text-slate-300">Liga Pauper</span> deste mês.
                 </>
               ) : (
                 <>
                   Apenas a modalidade{' '}
                   <span className="text-slate-300">Liga CMD 100 semanal</span>{' '}
-                  entra na liga mensal.{' '}
+                  entra na liga CMD100 mensal.{' '}
                   {modality === 'cmd_open_table'
                     ? 'Mesão livre não soma pontos na liga.'
                     : 'CMD em duplas não soma pontos na liga.'}
@@ -364,26 +402,38 @@ export default function CreateTournament() {
                   {players.length === 1 ? 'jogador' : 'jogadores'} adicionado
                   {players.length === 1 ? '' : 's'}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-3">
                   {players.map((player) => (
                     <div
                       key={player.id}
-                      className="flex items-center justify-between bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3"
+                      className="flex flex-col gap-3 bg-slate-800/50 border border-slate-700 rounded-lg px-4 py-3"
                     >
-                      <PlayerProfileSummary
-                        nickname={player.name}
-                        fullName={player.fullName}
-                        companionNick={player.companionNick}
-                        compact
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemovePlayer(player.id)}
-                        className="text-red-400 hover:text-red-300 hover:bg-red-950/30 shrink-0"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-between gap-2">
+                        <PlayerProfileSummary
+                          nickname={player.name}
+                          fullName={player.fullName}
+                          companionNick={player.companionNick}
+                          compact
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemovePlayer(player.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-950/30 shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      {isPauperModality(modality) && (
+                        <PauperRecordFields
+                          record={
+                            player.pauperRecord ?? { ...DEFAULT_PAUPER_RECORD }
+                          }
+                          onChange={(record) =>
+                            handleUpdatePauperRecord(player.id, record)
+                          }
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -410,14 +460,22 @@ export default function CreateTournament() {
 
         {players.length > 0 && players.length < minPlayers && (
           <p className="text-center text-slate-500 text-sm mt-4">
-            Adicione pelo menos {minPlayers} jogadores para criar o campeonato
+            Adicione pelo menos {minPlayers} jogador
+            {minPlayers !== 1 ? 'es' : ''} para criar o campeonato
           </p>
         )}
-        {modality !== 'doubles_cmd' && players.length >= minPlayers && (
+        {modality !== 'doubles_cmd' &&
+          modality !== 'weekly_pauper' &&
+          players.length >= minPlayers && (
           <p className="text-center text-slate-400 text-sm mt-4 max-w-md mx-auto">
             O campeonato será criado sem mesas. Na aba Rodadas, use{' '}
             <span className="text-slate-300">Gerar Mesas</span> uma única vez
             quando o elenco estiver fechado.
+          </p>
+        )}
+        {modality === 'weekly_pauper' && players.length >= minPlayers && (
+          <p className="text-center text-slate-400 text-sm mt-4 max-w-md mx-auto">
+            Informe V/D/E e aproveitamento agora ou edite depois na aba Jogadores.
           </p>
         )}
         {modality === 'doubles_cmd' &&

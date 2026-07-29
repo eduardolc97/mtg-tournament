@@ -1,4 +1,4 @@
-import { normalizeTournamentModality } from '../constants/tournamentModality';
+import { normalizeTournamentModality, isPauperModality } from '../constants/tournamentModality';
 import type { Player, Round, Table, Tournament } from '../types/tournament';
 import { buildRoundThree, isRoundFullyScored } from './finalRound';
 import {
@@ -38,6 +38,10 @@ function roundHasAnyResults(round: Round): boolean {
 export function canModifyTournamentRoster(
   tournament: Tournament
 ): { ok: boolean; reason?: string } {
+  if (isPauperModality(normalizeTournamentModality(tournament.modality))) {
+    return { ok: true };
+  }
+
   if (!isSinglesModality(tournament)) {
     return {
       ok: false,
@@ -74,6 +78,13 @@ export function canModifyTournamentRoster(
 export function canGenerateTournamentRounds(
   tournament: Tournament
 ): { ok: boolean; reason?: string } {
+  if (isPauperModality(normalizeTournamentModality(tournament.modality))) {
+    return {
+      ok: false,
+      reason: 'Torneios Pauper não utilizam geração de mesas.',
+    };
+  }
+
   if (!isSinglesModality(tournament)) {
     return {
       ok: false,

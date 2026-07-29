@@ -7,7 +7,14 @@ import {
   regenerateSwissRoundsOneAndTwoForTournament,
 } from '../utils/lateJoinPlayer';
 import { stripRoundsForStorage } from '../utils/roundPersistence';
-import { hydrateTournament } from '../utils/tournamentHydration';
+import {
+  hydrateTournament,
+  type ParticipantRow,
+} from '../utils/tournamentHydration';
+import {
+  normalizePauperRecord,
+  type PauperRecord,
+} from '../utils/pauperScoring';
 import { supabase } from './supabaseClient';
 
 type TournamentWire = Omit<
@@ -17,6 +24,7 @@ type TournamentWire = Omit<
   | 'leagueMonth'
   | 'modality'
   | 'doublesIncludeFourthSwissRound'
+  | 'pointsDoubled'
   | 'players'
 > & {
   createdAt: string;
@@ -24,6 +32,7 @@ type TournamentWire = Omit<
   leagueMonth?: number;
   modality?: string;
   doublesIncludeFourthSwissRound?: boolean | null;
+  pointsDoubled?: boolean;
 };
 
 type TournamentRow = {
@@ -35,19 +44,10 @@ type TournamentRow = {
   league_month: number;
   modality: string;
   doubles_include_fourth_swiss_round: boolean | null;
+  points_doubled: boolean;
 };
 
-type ParticipantJoinRow = {
-  id: string;
-  player_id: string;
-  partner_id: string | null;
-  players: {
-    id: string;
-    nickname: string;
-    full_name: string | null;
-    companion_nick: string | null;
-  } | null;
-};
+type ParticipantJoinRow = ParticipantRow;
 
 type TournamentRowWithParticipants = TournamentRow & {
   tournament_participants: ParticipantJoinRow[];
@@ -59,6 +59,10 @@ const TOURNAMENT_SELECT = `
     id,
     player_id,
     partner_id,
+    wins,
+    losses,
+    draws,
+    performance_pct,
     players (
       id,
       nickname,
@@ -102,6 +106,7 @@ export function parseTournament(
     leagueMonth: coerceLeagueInt(raw.leagueMonth, createdAt.getMonth() + 1),
     modality: normalizeTournamentModality(raw.modality),
     doublesIncludeFourthSwissRound: doublesFourth,
+    pointsDoubled: raw.pointsDoubled === true,
   };
 
   return hydrateTournament(base, participants);
@@ -121,6 +126,7 @@ function serializeTournament(t: Tournament): TournamentWire {
       t.doublesIncludeFourthSwissRound === false
         ? t.doublesIncludeFourthSwissRound
         : null,
+    pointsDoubled: t.pointsDoubled === true,
   };
 }
 
@@ -134,6 +140,7 @@ function rowToWire(row: TournamentRow): TournamentWire {
     leagueMonth: row.league_month,
     modality: row.modality,
     doublesIncludeFourthSwissRound: row.doubles_include_fourth_swiss_round,
+    pointsDoubled: row.points_doubled === true,
   };
 }
 
@@ -151,7 +158,8 @@ function isValidModality(m: unknown): m is string {
   return (
     m === 'weekly_cmd100' ||
     m === 'doubles_cmd' ||
-    m === 'cmd_open_table'
+    m === 'cmd_open_table' ||
+    m === 'weekly_pauper'
   );
 }
 
@@ -213,6 +221,7 @@ function wireToInsertRow(w: TournamentWire): TournamentRow {
     doubles_include_fourth_swiss_round: normalizeDoublesFourth(
       w.doublesIncludeFourthSwissRound,
     ),
+    points_doubled: w.pointsDoubled === true,
   };
 }
 
@@ -227,6 +236,7 @@ function wireToUpdateRow(w: TournamentWire): Omit<TournamentRow, 'id'> {
     doubles_include_fourth_swiss_round: normalizeDoublesFourth(
       w.doublesIncludeFourthSwissRound,
     ),
+    points_doubled: w.pointsDoubled === true,
   };
 }
 
@@ -239,6 +249,16 @@ function parseRowWithParticipants(
   return parseTournament(rowToWire(row), participants);
 }
 
+function pauperRecordToDb(record: PauperRecord) {
+  const normalized = normalizePauperRecord(record);
+  return {
+    wins: normalized.wins,
+    losses: normalized.losses,
+    draws: normalized.draws,
+    performance_pct: normalized.performancePct,
+  };
+}
+
 async function insertParticipants(
   tournamentId: string,
   players: Tournament['players']
@@ -248,6 +268,7 @@ async function insertParticipants(
     tournament_id: tournamentId,
     player_id: p.playerId,
     partner_id: p.partnerId ?? null,
+    ...pauperRecordToDb(p.pauperRecord ?? normalizePauperRecord(null)),
   }));
 
   const { error } = await supabase.from('tournament_participants').insert(rows);
@@ -265,6 +286,7 @@ export async function insertSingleParticipant(
     tournament_id: tournamentId,
     player_id: entry.playerId,
     partner_id: entry.partnerId ?? null,
+    ...pauperRecordToDb(entry.pauperRecord ?? normalizePauperRecord(null)),
   });
   if (error) {
     throw new Error(error.message);
@@ -283,6 +305,29 @@ export async function deleteSingleParticipant(
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function updateParticipantPauperRecord(
+  tournamentId: string,
+  entryId: string,
+  record: PauperRecord
+): Promise<void> {
+  const { error } = await supabase
+    .from('tournament_participants')
+    .update(pauperRecordToDb(record))
+    .eq('id', entryId)
+    .eq('tournament_id', tournamentId);
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function setTournamentPointsDoubled(
+  tournament: Tournament,
+  pointsDoubled: boolean
+): Promise<Tournament> {
+  const next: Tournament = { ...tournament, pointsDoubled };
+  return putTournament(next);
 }
 
 export async function addPlayerToTournament(
@@ -331,6 +376,18 @@ export async function fetchTournaments(): Promise<Tournament[]> {
   return (data as TournamentRowWithParticipants[]).map(parseRowWithParticipants);
 }
 
+async function refreshTournament(tournamentId: string): Promise<Tournament> {
+  const { data, error } = await supabase
+    .from('tournaments')
+    .select(TOURNAMENT_SELECT)
+    .eq('id', tournamentId)
+    .single();
+  if (error) {
+    throw new Error(error.message);
+  }
+  return parseRowWithParticipants(data as TournamentRowWithParticipants);
+}
+
 export async function postTournament(t: Tournament): Promise<Tournament> {
   const w = serializeTournament(t);
   assertCreatePayload(w, t.players.length);
@@ -347,15 +404,11 @@ export async function postTournament(t: Tournament): Promise<Tournament> {
 
   await insertParticipants(t.id, t.players);
 
-  const { data: refreshed, error: refreshError } = await supabase
-    .from('tournaments')
-    .select(TOURNAMENT_SELECT)
-    .eq('id', t.id)
-    .single();
-  if (refreshError) {
+  try {
+    return await refreshTournament(t.id);
+  } catch {
     return parseRowWithParticipants(data as TournamentRowWithParticipants);
   }
-  return parseRowWithParticipants(refreshed as TournamentRowWithParticipants);
 }
 
 export async function putTournament(t: Tournament): Promise<Tournament> {
@@ -372,4 +425,22 @@ export async function putTournament(t: Tournament): Promise<Tournament> {
     throw new Error(error.message);
   }
   return parseRowWithParticipants(data as TournamentRowWithParticipants);
+}
+
+export async function updatePauperRecordAndRefresh(
+  tournament: Tournament,
+  entryId: string,
+  record: PauperRecord
+): Promise<Tournament> {
+  await updateParticipantPauperRecord(tournament.id, entryId, record);
+  const nextPlayers = tournament.players.map((p) =>
+    p.id === entryId ? { ...p, pauperRecord: normalizePauperRecord(record) } : p
+  );
+  return refreshTournament(tournament.id).then((saved) => ({
+    ...saved,
+    players: saved.players.map((p) => {
+      const local = nextPlayers.find((x) => x.id === p.id);
+      return local ?? p;
+    }),
+  }));
 }

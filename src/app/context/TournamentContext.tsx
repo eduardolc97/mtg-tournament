@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import { Player, Tournament, TableResult } from '../types/tournament';
 import type { PlayerProfile } from '../types/player';
-import { normalizeTournamentModality } from '../constants/tournamentModality';
+import { normalizeTournamentModality, isPauperModality } from '../constants/tournamentModality';
 import { expectedSwissRoundsForTournament } from '../utils/tournamentSwiss';
 import {
   buildDoublesLastSwissRound,
@@ -17,6 +17,11 @@ import {
 } from '../utils/finalRound';
 import { createEntryId } from '../utils/lateJoinPlayer';
 import {
+  DEFAULT_PAUPER_RECORD,
+  normalizePauperRecord,
+  type PauperRecord,
+} from '../utils/pauperScoring';
+import {
   addPlayerToTournament as addPlayerToTournamentApi,
   fetchTournaments,
   generateTournamentRounds as generateTournamentRoundsApi,
@@ -24,6 +29,8 @@ import {
   putTournament,
   regenerateTournamentRounds as regenerateTournamentRoundsApi,
   removePlayerFromTournament as removePlayerFromTournamentApi,
+  setTournamentPointsDoubled,
+  updatePauperRecordAndRefresh,
 } from '../lib/tournamentsApi';
 
 interface TournamentContextType {
@@ -47,6 +54,15 @@ interface TournamentContextType {
     roundId: string,
     tableId: string,
     results: TableResult[]
+  ) => Promise<void>;
+  updatePauperRecord: (
+    tournamentId: string,
+    entryId: string,
+    record: PauperRecord
+  ) => Promise<void>;
+  togglePointsDoubled: (
+    tournamentId: string,
+    pointsDoubled: boolean
   ) => Promise<void>;
 }
 
@@ -212,6 +228,9 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
       name: profile.nickname,
       fullName: profile.fullName,
       companionNick: profile.companionNick,
+      pauperRecord: isPauperModality(normalizeTournamentModality(current.modality))
+        ? { ...DEFAULT_PAUPER_RECORD }
+        : undefined,
     };
     const saved = await addPlayerToTournamentApi(current, entry);
     setTournaments((prev) =>
@@ -255,6 +274,40 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updatePauperRecord = async (
+    tournamentId: string,
+    entryId: string,
+    record: PauperRecord
+  ) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    const normalized = normalizePauperRecord(record);
+    const saved = await updatePauperRecordAndRefresh(
+      current,
+      entryId,
+      normalized
+    );
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
+  const togglePointsDoubled = async (
+    tournamentId: string,
+    pointsDoubled: boolean
+  ) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    const saved = await setTournamentPointsDoubled(current, pointsDoubled);
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
   return (
     <TournamentContext.Provider
       value={{
@@ -268,6 +321,8 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
         regenerateTournamentRounds,
         getTournamentById,
         updateTableResults,
+        updatePauperRecord,
+        togglePointsDoubled,
       }}
     >
       {children}

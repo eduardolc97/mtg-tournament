@@ -17,10 +17,12 @@ import {
   Loader2,
   ListOrdered,
   Armchair,
+  Sparkles,
 } from 'lucide-react';
 import {
   normalizeTournamentModality,
   tournamentModalityLabelPt,
+  isPauperModality,
   type TournamentModality,
 } from '../constants/tournamentModality';
 import { monthLabel } from '../utils/monthlyLeague';
@@ -39,16 +41,22 @@ function groupDashboardTournaments(tournaments: Tournament[]): {
   weekly: Tournament[];
   weeklyByMonth: Map<string, Tournament[]>;
   monthKeysDesc: string[];
+  pauper: Tournament[];
+  pauperByMonth: Map<string, Tournament[]>;
+  pauperMonthKeysDesc: string[];
   doubles: Tournament[];
   open: Tournament[];
 } {
   const weekly: Tournament[] = [];
+  const pauper: Tournament[] = [];
   const doubles: Tournament[] = [];
   const open: Tournament[] = [];
   for (const t of tournaments) {
     const m = normalizeTournamentModality(t.modality);
     if (m === 'weekly_cmd100') {
       weekly.push(t);
+    } else if (m === 'weekly_pauper') {
+      pauper.push(t);
     } else if (m === 'doubles_cmd') {
       doubles.push(t);
     } else {
@@ -56,6 +64,7 @@ function groupDashboardTournaments(tournaments: Tournament[]): {
     }
   }
   weekly.sort(sortByCreatedDesc);
+  pauper.sort(sortByCreatedDesc);
   doubles.sort(sortByCreatedDesc);
   open.sort(sortByCreatedDesc);
 
@@ -73,7 +82,30 @@ function groupDashboardTournaments(tournaments: Tournament[]): {
     b.localeCompare(a, 'en')
   );
 
-  return { weekly, weeklyByMonth, monthKeysDesc, doubles, open };
+  const pauperByMonth = new Map<string, Tournament[]>();
+  for (const t of pauper) {
+    const k = leagueMonthSortKey(t);
+    const list = pauperByMonth.get(k);
+    if (list) {
+      list.push(t);
+    } else {
+      pauperByMonth.set(k, [t]);
+    }
+  }
+  const pauperMonthKeysDesc = [...pauperByMonth.keys()].sort((a, b) =>
+    b.localeCompare(a, 'en')
+  );
+
+  return {
+    weekly,
+    weeklyByMonth,
+    monthKeysDesc,
+    pauper,
+    pauperByMonth,
+    pauperMonthKeysDesc,
+    doubles,
+    open,
+  };
 }
 
 function parseLeagueMonthKey(key: string): { year: number; month: number } {
@@ -91,6 +123,7 @@ function TournamentListCard({
   showLeaguePeriod,
 }: TournamentListCardProps) {
   const modality = normalizeTournamentModality(tournament.modality);
+  const isPauper = isPauperModality(modality);
   return (
     <Link to={`/tournament/${tournament.id}`}>
       <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur hover:bg-slate-900/70 hover:border-purple-700/50 transition-all cursor-pointer group hover:shadow-lg hover:shadow-purple-500/20 h-full">
@@ -105,13 +138,21 @@ function TournamentListCard({
               <Users className="w-4 h-4 text-blue-400 shrink-0" />
               <span>{tournament.players.length} jogadores</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-yellow-400 shrink-0" />
-              <span>
-                {tournament.rounds.length} rodada
-                {tournament.rounds.length !== 1 ? 's' : ''}
-              </span>
-            </div>
+            {!isPauper && (
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-400 shrink-0" />
+                <span>
+                  {tournament.rounds.length} rodada
+                  {tournament.rounds.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+            {isPauper && tournament.pointsDoubled && (
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                <span className="text-amber-300/90">Pontos dobrados</span>
+              </div>
+            )}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
             <span className="text-slate-400">
@@ -147,7 +188,13 @@ const MODALITY_SECTION_ORDER: {
       value: 'weekly_cmd100',
       modality: 'weekly_cmd100',
       title: 'Liga CMD 100 semanal',
-      description: 'Torneios que entram na classificação mensal da liga.',
+      description: 'Torneios que entram na classificação mensal da liga CMD100.',
+    },
+    {
+      value: 'weekly_pauper',
+      modality: 'weekly_pauper',
+      title: 'Liga Pauper semanal',
+      description: 'Torneios x1 com pontuação manual; entram na Liga Pauper.',
     },
     {
       value: 'doubles_cmd',
@@ -199,14 +246,24 @@ export default function Dashboard() {
               Novo Campeonato
             </Button>
           </Link>
-          <Link to="/liga">
+          <Link to="/liga/cmd100">
             <Button
               size="lg"
               variant="outline"
               className="w-full sm:w-auto border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
             >
               <ListOrdered className="w-5 h-5 mr-2" />
-              Liga do mês
+              Liga CMD100
+            </Button>
+          </Link>
+          <Link to="/liga/pauper">
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full sm:w-auto border-emerald-500/50 text-emerald-200 hover:bg-emerald-950/50 hover:text-white"
+            >
+              <ListOrdered className="w-5 h-5 mr-2" />
+              Liga Pauper
             </Button>
           </Link>
         </div>
@@ -239,13 +296,27 @@ export default function Dashboard() {
             <Accordion type="multiple" defaultValue={[]} className="space-y-3">
               {MODALITY_SECTION_ORDER.map((section) => {
                 const isWeekly = section.modality === 'weekly_cmd100';
+                const isPauper = section.modality === 'weekly_pauper';
                 const isDoubles = section.modality === 'doubles_cmd';
                 const list = isWeekly
                   ? grouped.weekly
-                  : isDoubles
-                    ? grouped.doubles
-                    : grouped.open;
+                  : isPauper
+                    ? grouped.pauper
+                    : isDoubles
+                      ? grouped.doubles
+                      : grouped.open;
                 const count = list.length;
+                const groupByMonth = isWeekly || isPauper;
+                const monthKeys = isWeekly
+                  ? grouped.monthKeysDesc
+                  : isPauper
+                    ? grouped.pauperMonthKeysDesc
+                    : [];
+                const monthMap = isWeekly
+                  ? grouped.weeklyByMonth
+                  : isPauper
+                    ? grouped.pauperByMonth
+                    : new Map<string, Tournament[]>();
 
                 return (
                   <AccordionItem
@@ -259,6 +330,11 @@ export default function Dashboard() {
                           {isWeekly ? (
                             <ListOrdered
                               className="size-5 text-amber-400 shrink-0"
+                              aria-hidden
+                            />
+                          ) : isPauper ? (
+                            <ListOrdered
+                              className="size-5 text-emerald-400 shrink-0"
                               aria-hidden
                             />
                           ) : isDoubles ? (
@@ -289,19 +365,31 @@ export default function Dashboard() {
                         <p className="rounded-lg border border-dashed border-slate-600/60 bg-slate-950/30 py-6 text-center text-sm text-slate-500">
                           Nenhum campeonato nesta pasta.
                         </p>
-                      ) : isWeekly ? (
+                      ) : groupByMonth ? (
                         <div className="space-y-5">
-                          {grouped.monthKeysDesc.map((key) => {
-                            const inMonth = grouped.weeklyByMonth.get(key) ?? [];
+                          {monthKeys.map((key) => {
+                            const inMonth = monthMap.get(key) ?? [];
                             const { year, month } = parseLeagueMonthKey(key);
                             return (
                               <div
                                 key={key}
-                                className="rounded-lg border border-amber-900/35 bg-slate-950/45 p-3 sm:p-4"
+                                className={`rounded-lg border p-3 sm:p-4 ${
+                                  isPauper
+                                    ? 'border-emerald-900/35 bg-slate-950/45'
+                                    : 'border-amber-900/35 bg-slate-950/45'
+                                }`}
                               >
-                                <h3 className="mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-amber-100 sm:text-base">
+                                <h3
+                                  className={`mb-3 flex flex-wrap items-center gap-2 text-sm font-semibold sm:text-base ${
+                                    isPauper ? 'text-emerald-100' : 'text-amber-100'
+                                  }`}
+                                >
                                   <Calendar
-                                    className="size-4 shrink-0 text-amber-400/90"
+                                    className={`size-4 shrink-0 ${
+                                      isPauper
+                                        ? 'text-emerald-400/90'
+                                        : 'text-amber-400/90'
+                                    }`}
                                     aria-hidden
                                   />
                                   <span className="capitalize">
