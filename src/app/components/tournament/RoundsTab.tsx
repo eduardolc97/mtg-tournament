@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { normalizeTournamentModality } from '../../constants/tournamentModality';
 import { Tournament } from '../../types/tournament';
-import { canGenerateTournamentRounds } from '../../utils/lateJoinPlayer';
+import {
+  canGenerateTournamentRounds,
+  canRegenerateTournamentRounds,
+} from '../../utils/lateJoinPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Target, Circle, Maximize2, Sparkles, Loader2 } from 'lucide-react';
+import { Target, Circle, Maximize2, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import TableCard from './TableCard';
 import RoundPresentationDialog from './RoundPresentationDialog';
 import { isRoundFullyScored } from '../../utils/finalRound';
@@ -13,17 +16,20 @@ import { toast } from 'sonner';
 interface RoundsTabProps {
   tournament: Tournament;
   onGenerateRounds?: (tournamentId: string) => Promise<void>;
+  onRegenerateRounds?: (tournamentId: string) => Promise<void>;
 }
 
 export default function RoundsTab({
   tournament,
   onGenerateRounds,
+  onRegenerateRounds,
 }: RoundsTabProps) {
   const doubles =
     normalizeTournamentModality(tournament.modality) === 'doubles_cmd';
   const singles =
     normalizeTournamentModality(tournament.modality) !== 'doubles_cmd';
   const [generating, setGenerating] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [presentationRoundId, setPresentationRoundId] = useState<string | null>(
     null
   );
@@ -35,6 +41,12 @@ export default function RoundsTab({
     () => canGenerateTournamentRounds(tournament),
     [tournament]
   );
+  const regenerateGuard = useMemo(
+    () => canRegenerateTournamentRounds(tournament),
+    [tournament]
+  );
+  const showRegenerateButton =
+    singles && !!onRegenerateRounds && regenerateGuard.ok;
 
   const handleGenerateRounds = async () => {
     if (!onGenerateRounds || !generateGuard.ok) {
@@ -56,6 +68,28 @@ export default function RoundsTab({
     }
   };
 
+  const handleRegenerateRounds = async () => {
+    if (!onRegenerateRounds || !regenerateGuard.ok) {
+      if (regenerateGuard.reason) {
+        toast.error(regenerateGuard.reason);
+      }
+      return;
+    }
+    setRegenerating(true);
+    try {
+      await onRegenerateRounds(tournament.id);
+      toast.success('Mesas das rodadas 1 e 2 regeneradas!');
+    } catch (e) {
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : 'Não foi possível regenerar as rodadas.'
+      );
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   if (tournament.rounds.length === 0) {
     return (
       <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur">
@@ -69,7 +103,7 @@ export default function RoundsTab({
           <Target className="w-16 h-16 text-slate-600 mx-auto" />
           <p className="text-slate-400 max-w-md mx-auto">
             {singles
-              ? 'Nenhuma mesa gerada ainda. Ajuste o elenco na aba Jogadores e use o botão abaixo quando estiver pronto. Este passo só pode ser feito uma vez.'
+              ? 'Nenhuma mesa gerada ainda. Ajuste o elenco na aba Jogadores e use o botão abaixo quando estiver pronto. Enquanto nenhum resultado for salvo, você ainda poderá regenerar as mesas.'
               : 'Nenhuma rodada gerada ainda.'}
           </p>
           {singles && onGenerateRounds && (
@@ -118,6 +152,29 @@ export default function RoundsTab({
           round={presentationRound}
           modality={tournament.modality}
         />
+      )}
+      {showRegenerateButton && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-purple-900/50 bg-slate-900/40 px-4 py-3">
+          <p className="text-sm text-slate-300">
+            Nenhuma mesa finalizada ainda. Você pode sortear de novo as mesas das
+            rodadas 1 e 2.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 border-purple-500/50 text-purple-200 hover:bg-purple-950/50 hover:text-white"
+            disabled={regenerating}
+            onClick={handleRegenerateRounds}
+          >
+            {regenerating ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Regenerar mesas
+          </Button>
+        </div>
       )}
       {tournament.rounds.map((round) => {
         const allTablesCompleted = isRoundFullyScored(round);

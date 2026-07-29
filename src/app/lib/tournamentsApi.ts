@@ -4,6 +4,7 @@ import {
   applyLateJoin,
   applyRosterRemoval,
   generateInitialRoundsForTournament,
+  regenerateSwissRoundsOneAndTwoForTournament,
 } from '../utils/lateJoinPlayer';
 import { stripRoundsForStorage } from '../utils/roundPersistence';
 import { hydrateTournament } from '../utils/tournamentHydration';
@@ -306,6 +307,13 @@ export async function generateTournamentRounds(
   tournament: Tournament
 ): Promise<Tournament> {
   const updated = generateInitialRoundsForTournament(tournament);
+  return putTournament(updated);
+}
+
+export async function regenerateTournamentRounds(
+  tournament: Tournament
+): Promise<Tournament> {
+  const updated = regenerateSwissRoundsOneAndTwoForTournament(tournament);
   return putTournament(updated);
 }
 

@@ -22,6 +22,7 @@ import {
   generateTournamentRounds as generateTournamentRoundsApi,
   postTournament,
   putTournament,
+  regenerateTournamentRounds as regenerateTournamentRoundsApi,
   removePlayerFromTournament as removePlayerFromTournamentApi,
 } from '../lib/tournamentsApi';
 
@@ -39,6 +40,7 @@ interface TournamentContextType {
     entryId: string
   ) => Promise<void>;
   generateTournamentRounds: (tournamentId: string) => Promise<void>;
+  regenerateTournamentRounds: (tournamentId: string) => Promise<void>;
   getTournamentById: (id: string) => Tournament | undefined;
   updateTableResults: (
     tournamentId: string,
@@ -242,6 +244,17 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const regenerateTournamentRounds = async (tournamentId: string) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    const saved = await regenerateTournamentRoundsApi(current);
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
   return (
     <TournamentContext.Provider
       value={{
@@ -252,6 +265,7 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
         addPlayerToTournament,
         removePlayerFromTournament,
         generateTournamentRounds,
+        regenerateTournamentRounds,
         getTournamentById,
         updateTableResults,
       }}

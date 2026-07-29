@@ -102,6 +102,51 @@ export function canGenerateTournamentRounds(
   return { ok: true };
 }
 
+export function tournamentHasAnySavedTableResults(
+  tournament: Tournament
+): boolean {
+  return tournament.rounds.some((round) => roundHasAnyResults(round));
+}
+
+export function canRegenerateTournamentRounds(
+  tournament: Tournament
+): { ok: boolean; reason?: string } {
+  if (!isSinglesModality(tournament)) {
+    return {
+      ok: false,
+      reason: 'Regeneração de rodadas não disponível nesta modalidade.',
+    };
+  }
+
+  if (tournament.rounds.length === 0) {
+    return { ok: false, reason: 'Ainda não há mesas para regenerar.' };
+  }
+
+  if (tournamentHasAnySavedTableResults(tournament)) {
+    return {
+      ok: false,
+      reason:
+        'Não é possível regenerar as mesas depois que um resultado foi salvo.',
+    };
+  }
+
+  if (tournament.players.length < 3) {
+    return {
+      ok: false,
+      reason: 'Adicione pelo menos 3 jogadores antes de regenerar as mesas.',
+    };
+  }
+
+  if (!isValidTournamentPlayerCount(tournament.players.length)) {
+    return {
+      ok: false,
+      reason: `Com ${tournament.players.length} jogadores não é possível formar mesas só de 3 ou 4. Ajuste o elenco na aba Jogadores.`,
+    };
+  }
+
+  return { ok: true };
+}
+
 export const canAddPlayerToTournament = canModifyTournamentRoster;
 
 function splitFinalAndRegular(tables: Table[]): {
@@ -402,6 +447,21 @@ export function generateInitialRoundsForTournament(
   const guard = canGenerateTournamentRounds(tournament);
   if (!guard.ok) {
     throw new Error(guard.reason ?? 'Não é possível gerar rodadas.');
+  }
+
+  const rounds = generateSwissRoundsOneAndTwo(tournament.players);
+  for (const round of rounds) {
+    assertStrictMesaSizes(round.tables);
+  }
+  return { ...tournament, rounds };
+}
+
+export function regenerateSwissRoundsOneAndTwoForTournament(
+  tournament: Tournament
+): Tournament {
+  const guard = canRegenerateTournamentRounds(tournament);
+  if (!guard.ok) {
+    throw new Error(guard.reason ?? 'Não é possível regenerar as rodadas.');
   }
 
   const rounds = generateSwissRoundsOneAndTwo(tournament.players);
