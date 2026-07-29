@@ -155,10 +155,6 @@ export default function PlayerProfileDialog({
             {showPauperFields && (
               <div className="grid gap-2 rounded-lg border border-emerald-900/40 bg-emerald-950/20 p-3">
                 <Label className="text-slate-300">Resultado Pauper</Label>
-                <p className="text-xs text-slate-500">
-                  V/D/E — um dígito cada (ex.: 2/0/1). Aproveitamento: até 4
-                  dígitos (6500 → 65%, 5433 → 54,33%).
-                </p>
                 <PauperRecordFields
                   key={`dialog-pauper-${pauperFieldsKey}`}
                   record={pauperRecord}
