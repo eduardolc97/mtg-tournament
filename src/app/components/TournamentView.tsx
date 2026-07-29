@@ -49,7 +49,7 @@ export default function TournamentView() {
     removePlayerFromTournament,
     generateTournamentRounds,
     regenerateTournamentRounds,
-    updatePauperRecord,
+    updateAllPauperRecords,
     togglePointsDoubled,
   } = useTournaments();
 
@@ -215,7 +215,7 @@ export default function TournamentView() {
                 tournament={tournament}
                 onAddPlayer={addPlayerToTournament}
                 onRemovePlayer={removePlayerFromTournament}
-                onUpdateRecord={updatePauperRecord}
+                onUpdateAllRecords={updateAllPauperRecords}
               />
             ) : (
               <PlayersTab

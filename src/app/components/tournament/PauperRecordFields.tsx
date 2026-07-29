@@ -51,8 +51,8 @@ export default function PauperRecordFields({
     : 'h-9 w-24 sm:w-28 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-2 font-mono text-lg tracking-wider';
 
   const pctInputClass = compact
-    ? 'h-9 w-14 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1'
-    : 'h-9 w-16 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1';
+    ? 'h-9 w-[4.5rem] bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1'
+    : 'h-9 w-20 bg-slate-800/50 border-slate-600 text-white text-center tabular-nums px-1';
 
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -86,11 +86,10 @@ export default function PauperRecordFields({
         <div className="relative">
           <Input
             type="text"
-            inputMode="numeric"
+            inputMode="decimal"
             disabled={disabled}
             value={performanceMask}
             placeholder={PAUPER_PERFORMANCE_PLACEHOLDER}
-            maxLength={3}
             onChange={(e) => {
               const masked = applyPerformanceMaskInput(e.target.value);
               setPerformanceMask(masked);

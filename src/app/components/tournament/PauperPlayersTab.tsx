@@ -9,7 +9,7 @@ import {
 import PlayerPickerSection from '../PlayerPickerSection';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { UserPlus, X, Loader2 } from 'lucide-react';
+import { UserPlus, X, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import PauperRecordFields from './PauperRecordFields';
 
@@ -21,11 +21,21 @@ interface PauperPlayersTabProps {
     pauperRecord?: PauperRecord
   ) => Promise<void>;
   onRemovePlayer: (tournamentId: string, entryId: string) => Promise<void>;
-  onUpdateRecord: (
+  onUpdateAllRecords: (
     tournamentId: string,
-    entryId: string,
-    record: PauperRecord
+    updates: Array<{ entryId: string; record: PauperRecord }>
   ) => Promise<void>;
+}
+
+function recordsEqual(a: PauperRecord, b: PauperRecord): boolean {
+  const na = normalizePauperRecord(a);
+  const nb = normalizePauperRecord(b);
+  return (
+    na.wins === nb.wins &&
+    na.losses === nb.losses &&
+    na.draws === nb.draws &&
+    na.performancePct === nb.performancePct
+  );
 }
 
 function recordResetKey(record: PauperRecord): string {
@@ -37,10 +47,11 @@ export default function PauperPlayersTab({
   tournament,
   onAddPlayer,
   onRemovePlayer,
-  onUpdateRecord,
+  onUpdateAllRecords,
 }: PauperPlayersTabProps) {
-  const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
+  const [savingAll, setSavingAll] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, PauperRecord>>({});
+  const [savedVersion, setSavedVersion] = useState(0);
 
   const excludedPlayerIds = useMemo(
     () => new Set(tournament.players.map((p) => p.playerId)),
@@ -58,6 +69,21 @@ export default function PauperPlayersTab({
     },
     [drafts]
   );
+
+  const dirtyUpdates = useMemo(() => {
+    return tournament.players
+      .map((player) => {
+        const draft = getDraft(player);
+        const saved = normalizePauperRecord(
+          player.pauperRecord ?? DEFAULT_PAUPER_RECORD
+        );
+        if (recordsEqual(draft, saved)) {
+          return null;
+        }
+        return { entryId: player.id, record: draft };
+      })
+      .filter((u): u is { entryId: string; record: PauperRecord } => u !== null);
+  }, [tournament.players, getDraft]);
 
   const handleAddFromProfile = async (
     profile: PlayerProfile,
@@ -94,23 +120,26 @@ export default function PauperPlayersTab({
     }
   };
 
-  const handleSaveRecord = async (entryId: string, record: PauperRecord) => {
-    setSavingEntryId(entryId);
+  const handleSaveAll = async () => {
+    if (dirtyUpdates.length === 0) {
+      return;
+    }
+    setSavingAll(true);
     try {
-      const normalized = normalizePauperRecord(record);
-      await onUpdateRecord(tournament.id, entryId, normalized);
-      setDrafts((prev) => {
-        const next = { ...prev };
-        delete next[entryId];
-        return next;
-      });
-      toast.success('Resultado salvo.');
+      await onUpdateAllRecords(tournament.id, dirtyUpdates);
+      setDrafts({});
+      setSavedVersion((v) => v + 1);
+      toast.success(
+        dirtyUpdates.length === 1
+          ? 'Resultado salvo.'
+          : `${dirtyUpdates.length} resultados salvos.`
+      );
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : 'Não foi possível salvar o resultado.'
+        e instanceof Error ? e.message : 'Não foi possível salvar os resultados.'
       );
     } finally {
-      setSavingEntryId(null);
+      setSavingAll(false);
     }
   };
 
@@ -135,9 +164,31 @@ export default function PauperPlayersTab({
 
       <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur">
         <CardHeader>
-          <CardTitle className="text-white">
-            Resultados ({tournament.players.length})
-          </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-white">
+              Resultados ({tournament.players.length})
+            </CardTitle>
+            {tournament.players.length > 0 && (
+              <Button
+                size="sm"
+                disabled={dirtyUpdates.length === 0 || savingAll}
+                onClick={handleSaveAll}
+                className="bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-40"
+              >
+                {savingAll ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-2" />
+                )}
+                Salvar resultados
+                {dirtyUpdates.length > 0 && !savingAll && (
+                  <span className="ml-1.5 text-purple-200/80">
+                    ({dirtyUpdates.length})
+                  </span>
+                )}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {tournament.players.length === 0 ? (
@@ -151,17 +202,16 @@ export default function PauperPlayersTab({
                 const saved = normalizePauperRecord(
                   player.pauperRecord ?? DEFAULT_PAUPER_RECORD
                 );
-                const isDirty =
-                  draft.wins !== saved.wins ||
-                  draft.losses !== saved.losses ||
-                  draft.draws !== saved.draws ||
-                  draft.performancePct !== saved.performancePct;
-                const isSaving = savingEntryId === player.id;
+                const isDirty = !recordsEqual(draft, saved);
 
                 return (
                   <div
                     key={player.id}
-                    className="rounded-lg border border-slate-700 bg-slate-800/40 p-3 sm:p-4"
+                    className={`rounded-lg border p-3 sm:p-4 ${
+                      isDirty
+                        ? 'border-purple-600/50 bg-purple-950/20'
+                        : 'border-slate-700 bg-slate-800/40'
+                    }`}
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 flex-1">
@@ -173,6 +223,7 @@ export default function PauperPlayersTab({
                       <Button
                         variant="ghost"
                         size="sm"
+                        disabled={savingAll}
                         onClick={() => handleRemovePlayer(player.id, player.name)}
                         className="self-start text-red-400 hover:text-red-300 hover:bg-red-950/30 shrink-0"
                         aria-label={`Remover ${player.name}`}
@@ -180,9 +231,9 @@ export default function PauperPlayersTab({
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
-                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="mt-3">
                       <PauperRecordFields
-                        key={`${player.id}-${recordResetKey(saved)}`}
+                        key={`${player.id}-${recordResetKey(saved)}-${savedVersion}`}
                         record={draft}
                         pointsDoubled={pointsDoubled}
                         onChange={(record) =>
@@ -191,20 +242,8 @@ export default function PauperPlayersTab({
                             [player.id]: record,
                           }))
                         }
-                        disabled={isSaving}
+                        disabled={savingAll}
                       />
-                      <Button
-                        size="sm"
-                        disabled={!isDirty || isSaving}
-                        onClick={() => handleSaveRecord(player.id, draft)}
-                        className="shrink-0 bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-40"
-                      >
-                        {isSaving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          'Salvar'
-                        )}
-                      </Button>
                     </div>
                   </div>
                 );

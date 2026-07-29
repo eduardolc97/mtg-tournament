@@ -1,9 +1,10 @@
 import { normalizePauperRecord, type PauperRecord } from './pauperScoring';
 
 const MAX_DIGIT = 9;
+const MAX_PERFORMANCE_DIGITS = 4;
 
 export const PAUPER_RECORD_MASK_PLACEHOLDER = '0/0/0';
-export const PAUPER_PERFORMANCE_PLACEHOLDER = '0';
+export const PAUPER_PERFORMANCE_PLACEHOLDER = '0,00';
 
 function clampDigit(n: number): number {
   return Math.min(MAX_DIGIT, Math.max(0, Math.floor(n)));
@@ -48,24 +49,69 @@ export function parsePauperRecordMask(
   return normalizePauperRecord({ wins, losses, draws, performancePct });
 }
 
-export function applyPerformanceMaskInput(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 3);
+function performanceDigitsToNumber(digits: string): number {
+  if (digits.length === 0) {
+    return 0;
+  }
+  const raw = parseInt(digits, 10) / 100;
+  return Math.min(100, Math.max(0, raw));
+}
+
+export function formatPerformancePercentDisplay(value: number): string {
+  const capped = Math.min(100, Math.max(0, value));
+  const rounded = Math.round(capped * 100) / 100;
+  if (Number.isInteger(rounded)) {
+    return String(rounded);
+  }
+  const [intPart, decPart] = rounded.toFixed(2).split('.');
+  const decTrimmed = decPart.replace(/0+$/, '');
+  if (decTrimmed === '') {
+    return intPart;
+  }
+  return `${intPart},${decTrimmed}`;
+}
+
+export function formatPerformanceFromDigits(digits: string): string {
   if (digits.length === 0) {
     return '';
   }
-  const n = parseInt(digits, 10);
-  if (!Number.isFinite(n)) {
-    return '';
-  }
-  return String(Math.min(100, n));
+  return formatPerformancePercentDisplay(performanceDigitsToNumber(digits));
+}
+
+export function applyPerformanceMaskInput(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, MAX_PERFORMANCE_DIGITS);
+  return formatPerformanceFromDigits(digits);
 }
 
 export function parsePerformanceMask(raw: string): number | null {
-  const trimmed = raw.trim();
+  const trimmed = raw.replace(/%/g, '').trim();
   if (trimmed === '') {
     return null;
   }
-  const n = parseInt(trimmed, 10);
+
+  if (trimmed.includes(',')) {
+    const normalized = trimmed.replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(normalized);
+    if (!Number.isFinite(n)) {
+      return null;
+    }
+    return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
+  }
+
+  if (trimmed.includes('.')) {
+    const n = parseFloat(trimmed);
+    if (!Number.isFinite(n)) {
+      return null;
+    }
+    return Math.min(100, Math.max(0, Math.round(n * 100) / 100));
+  }
+
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length > 0) {
+    return performanceDigitsToNumber(digits.slice(0, MAX_PERFORMANCE_DIGITS));
+  }
+
+  const n = parseFloat(trimmed);
   if (!Number.isFinite(n)) {
     return null;
   }
@@ -76,7 +122,7 @@ export function formatPerformanceMask(record: PauperRecord): string {
   if (record.performancePct === null || record.performancePct === undefined) {
     return '';
   }
-  return String(Math.round(record.performancePct));
+  return formatPerformancePercentDisplay(record.performancePct);
 }
 
 export function mergePauperRecordFromMasks(

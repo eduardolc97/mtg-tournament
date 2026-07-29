@@ -427,6 +427,25 @@ export async function putTournament(t: Tournament): Promise<Tournament> {
   return parseRowWithParticipants(data as TournamentRowWithParticipants);
 }
 
+export async function updateAllPauperRecordsAndRefresh(
+  tournament: Tournament,
+  updates: Array<{ entryId: string; record: PauperRecord }>
+): Promise<Tournament> {
+  if (updates.length === 0) {
+    return tournament;
+  }
+  await Promise.all(
+    updates.map(({ entryId, record }) =>
+      updateParticipantPauperRecord(
+        tournament.id,
+        entryId,
+        normalizePauperRecord(record)
+      )
+    )
+  );
+  return refreshTournament(tournament.id);
+}
+
 export async function updatePauperRecordAndRefresh(
   tournament: Tournament,
   entryId: string,

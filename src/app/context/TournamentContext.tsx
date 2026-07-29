@@ -31,6 +31,7 @@ import {
   removePlayerFromTournament as removePlayerFromTournamentApi,
   setTournamentPointsDoubled,
   updatePauperRecordAndRefresh,
+  updateAllPauperRecordsAndRefresh,
 } from '../lib/tournamentsApi';
 
 interface TournamentContextType {
@@ -60,6 +61,10 @@ interface TournamentContextType {
     tournamentId: string,
     entryId: string,
     record: PauperRecord
+  ) => Promise<void>;
+  updateAllPauperRecords: (
+    tournamentId: string,
+    updates: Array<{ entryId: string; record: PauperRecord }>
   ) => Promise<void>;
   togglePointsDoubled: (
     tournamentId: string,
@@ -299,6 +304,24 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateAllPauperRecords = async (
+    tournamentId: string,
+    updates: Array<{ entryId: string; record: PauperRecord }>
+  ) => {
+    const current = tournaments.find((t) => t.id === tournamentId);
+    if (!current) {
+      throw new Error('Tournament not found');
+    }
+    const normalized = updates.map(({ entryId, record }) => ({
+      entryId,
+      record: normalizePauperRecord(record),
+    }));
+    const saved = await updateAllPauperRecordsAndRefresh(current, normalized);
+    setTournaments((prev) =>
+      prev.map((t) => (t.id === tournamentId ? saved : t))
+    );
+  };
+
   const togglePointsDoubled = async (
     tournamentId: string,
     pointsDoubled: boolean
@@ -327,6 +350,7 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
         getTournamentById,
         updateTableResults,
         updatePauperRecord,
+        updateAllPauperRecords,
         togglePointsDoubled,
       }}
     >

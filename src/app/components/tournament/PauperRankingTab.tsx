@@ -5,6 +5,7 @@ import {
   formatPauperRecordLabel,
   getPauperRecordFromPlayer,
 } from '../../utils/pauperScoring';
+import { formatPerformancePercentDisplay } from '../../utils/pauperRecordMask';
 import { formatPauperTournamentRankingMessage } from '../../utils/pauperLeague';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -125,7 +126,7 @@ export default function PauperRankingTab({ tournament }: PauperRankingTabProps) 
                       </TableCell>
                       <TableCell className="text-center tabular-nums text-slate-400 hidden sm:table-cell">
                         {record.performancePct !== null
-                          ? `${record.performancePct}%`
+                          ? `${formatPerformancePercentDisplay(record.performancePct)}%`
                           : '—'}
                       </TableCell>
                       <TableCell className="text-center tabular-nums text-purple-300 font-semibold">
