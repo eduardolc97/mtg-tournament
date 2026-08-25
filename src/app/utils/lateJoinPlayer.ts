@@ -4,7 +4,7 @@ import { buildRoundThree, isRoundFullyScored } from './finalRound';
 import {
   assertStrictMesaSizes,
   buildFlexibleTablesForRound,
-  generateSwissRoundsOneAndTwo,
+  generateSwissRounds,
   isValidTournamentPlayerCount,
 } from './roundGenerator';
 import { expectedSwissRoundsForTournament } from './tournamentSwiss';
@@ -460,7 +460,10 @@ export function generateInitialRoundsForTournament(
     throw new Error(guard.reason ?? 'Não é possível gerar rodadas.');
   }
 
-  const rounds = generateSwissRoundsOneAndTwo(tournament.players);
+  const rounds = generateSwissRounds(
+    tournament.players,
+    expectedSwissRoundsForTournament(tournament)
+  );
   for (const round of rounds) {
     assertStrictMesaSizes(round.tables);
   }
@@ -475,7 +478,10 @@ export function regenerateSwissRoundsOneAndTwoForTournament(
     throw new Error(guard.reason ?? 'Não é possível regenerar as rodadas.');
   }
 
-  const rounds = generateSwissRoundsOneAndTwo(tournament.players);
+  const rounds = generateSwissRounds(
+    tournament.players,
+    expectedSwissRoundsForTournament(tournament)
+  );
   for (const round of rounds) {
     assertStrictMesaSizes(round.tables);
   }

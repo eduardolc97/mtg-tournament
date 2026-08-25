@@ -45,7 +45,8 @@ export function countsTowardPauperLeague(
 export function expectedSwissRoundCount(
   modality: TournamentModality,
   playerCount: number,
-  doublesIncludeFourthSwissRound?: boolean | null
+  doublesIncludeFourthSwissRound?: boolean | null,
+  openTableIncludeFourthRound?: boolean | null
 ): number {
   if (modality === 'weekly_pauper') {
     return 0;
@@ -57,13 +58,17 @@ export function expectedSwissRoundCount(
     }
     return doublesIncludeFourthSwissRound === true ? 4 : 3;
   }
+  if (modality === 'cmd_open_table') {
+    return openTableIncludeFourthRound === true ? 3 : 2;
+  }
   return 2;
 }
 
 export function plannedTotalRounds(
   modality: TournamentModality,
   playerCount: number,
-  doublesIncludeFourthSwissRound?: boolean | null
+  doublesIncludeFourthSwissRound?: boolean | null,
+  openTableIncludeFourthRound?: boolean | null
 ): number {
   if (modality === 'weekly_pauper') {
     return 0;
@@ -71,7 +76,8 @@ export function plannedTotalRounds(
   const swiss = expectedSwissRoundCount(
     modality,
     playerCount,
-    doublesIncludeFourthSwissRound
+    doublesIncludeFourthSwissRound,
+    openTableIncludeFourthRound
   );
   if (modality === 'doubles_cmd') {
     return swiss;

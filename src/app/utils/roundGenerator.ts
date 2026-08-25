@@ -326,12 +326,234 @@ function generateRoundWithPairing(
 }
 
 export function generateSwissRoundsOneAndTwo(players: Player[]): Round[] {
+  return generateSwissRounds(players, 2);
+}
+
+type PairingScheduleScore = {
+  repeatedCompleteTables: number;
+  repeatedTrios: number;
+  pairRepeatPenalty: number;
+  threePlayerTableSpread: number;
+  threePlayerTablePenalty: number;
+};
+
+export type PairingScheduleMetrics = PairingScheduleScore & {
+  maximumPairMeetings: number;
+  threePlayerTableAppearances: Record<string, number>;
+};
+
+type PairingScheduleCandidate = {
+  rounds: Round[];
+  score: PairingScheduleScore;
+};
+
+const PAIRING_SCHEDULE_ATTEMPTS = 1200;
+const RANDOM_FINALIST_COUNT = 8;
+
+function groupKey(ids: string[]): string {
+  return [...ids].sort().join('\0');
+}
+
+function tableTriples(ids: string[]): string[] {
+  if (ids.length < 3) {
+    return [];
+  }
+  const triples: string[] = [];
+  for (let i = 0; i < ids.length; i++) {
+    for (let j = i + 1; j < ids.length; j++) {
+      for (let k = j + 1; k < ids.length; k++) {
+        triples.push(groupKey([ids[i], ids[j], ids[k]]));
+      }
+    }
+  }
+  return triples;
+}
+
+function repeatPenalty(count: number): number {
+  if (count <= 1) {
+    return 0;
+  }
+  const repeats = count - 1;
+  return repeats * repeats;
+}
+
+export function analyzePairingSchedule(
+  rounds: Round[],
+  players: Player[]
+): PairingScheduleMetrics {
+  const completeTables = new Map<string, number>();
+  const trios = new Map<string, number>();
+  const pairs = new Map<string, number>();
+  const threePlayerTableCounts = new Map(
+    players.map((player) => [player.id, 0])
+  );
+
+  for (const round of rounds) {
+    for (const table of round.tables) {
+      const ids = table.players.map((player) => player.id);
+      const completeKey = groupKey(ids);
+      completeTables.set(
+        completeKey,
+        (completeTables.get(completeKey) ?? 0) + 1
+      );
+
+      for (const triple of tableTriples(ids)) {
+        trios.set(triple, (trios.get(triple) ?? 0) + 1);
+      }
+
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const key = pairKey(ids[i], ids[j]);
+          pairs.set(key, (pairs.get(key) ?? 0) + 1);
+        }
+      }
+
+      if (ids.length === 3) {
+        for (const id of ids) {
+          threePlayerTableCounts.set(
+            id,
+            (threePlayerTableCounts.get(id) ?? 0) + 1
+          );
+        }
+      }
+    }
+  }
+
+  const tableThreeValues = [...threePlayerTableCounts.values()];
+  const minimumThreePlayerTables = Math.min(...tableThreeValues);
+  const maximumThreePlayerTables = Math.max(...tableThreeValues);
+
+  return {
+    repeatedCompleteTables: [...completeTables.values()].reduce(
+      (total, count) => total + Math.max(0, count - 1),
+      0
+    ),
+    repeatedTrios: [...trios.values()].reduce(
+      (total, count) => total + Math.max(0, count - 1),
+      0
+    ),
+    pairRepeatPenalty: [...pairs.values()].reduce(
+      (total, count) => total + repeatPenalty(count),
+      0
+    ),
+    maximumPairMeetings: Math.max(0, ...pairs.values()),
+    threePlayerTableSpread:
+      maximumThreePlayerTables - minimumThreePlayerTables,
+    threePlayerTablePenalty: tableThreeValues.reduce(
+      (total, count) => total + count * count,
+      0
+    ),
+    threePlayerTableAppearances: Object.fromEntries(threePlayerTableCounts),
+  };
+}
+
+function compareScheduleScores(
+  a: PairingScheduleScore,
+  b: PairingScheduleScore
+): number {
+  return (
+    a.repeatedCompleteTables - b.repeatedCompleteTables ||
+    a.repeatedTrios - b.repeatedTrios ||
+    a.threePlayerTableSpread - b.threePlayerTableSpread ||
+    a.threePlayerTablePenalty - b.threePlayerTablePenalty ||
+    a.pairRepeatPenalty - b.pairRepeatPenalty
+  );
+}
+
+function buildRandomSchedule(players: Player[], roundCount: number): Round[] {
+  const sizes = computeTableSizes(players.length);
   const rounds: Round[] = [];
-  const r1 = generateRoundWithPairing(players, 1, []);
-  rounds.push(r1);
-  const r2 = generateRoundWithPairing(players, 2, rounds);
-  rounds.push(r2);
+  const threePlayerTableCounts = new Map(
+    players.map((player) => [player.id, 0])
+  );
+  const threePlayerSeatCount = sizes
+    .filter((size) => size === 3)
+    .reduce((total, size) => total + size, 0);
+
+  for (let roundNumber = 1; roundNumber <= roundCount; roundNumber++) {
+    const randomizedForThreePlayerTables = shuffleArray(players).sort(
+      (a, b) =>
+        (threePlayerTableCounts.get(a.id) ?? 0) -
+        (threePlayerTableCounts.get(b.id) ?? 0)
+    );
+    const threePlayerTablePlayers = shuffleArray(
+      randomizedForThreePlayerTables.slice(0, threePlayerSeatCount)
+    );
+    const threePlayerIds = new Set(
+      threePlayerTablePlayers.map((player) => player.id)
+    );
+    const fourPlayerTablePlayers = shuffleArray(
+      players.filter((player) => !threePlayerIds.has(player.id))
+    );
+    let threePlayerIndex = 0;
+    let fourPlayerIndex = 0;
+    const tables = sizes.map((size, tableIndex) => {
+      const tablePlayers =
+        size === 3
+          ? threePlayerTablePlayers.slice(
+              threePlayerIndex,
+              threePlayerIndex + size
+            )
+          : fourPlayerTablePlayers.slice(
+              fourPlayerIndex,
+              fourPlayerIndex + size
+            );
+      if (size === 3) {
+        threePlayerIndex += size;
+        for (const player of tablePlayers) {
+          threePlayerTableCounts.set(
+            player.id,
+            (threePlayerTableCounts.get(player.id) ?? 0) + 1
+          );
+        }
+      } else {
+        fourPlayerIndex += size;
+      }
+      return {
+        id: `round-${roundNumber}-table-${tableIndex + 1}`,
+        players: tablePlayers,
+      };
+    });
+    rounds.push({
+      id: `round-${roundNumber}`,
+      number: roundNumber,
+      tables,
+    });
+  }
+
   return rounds;
+}
+
+function generateDiverseRandomSchedule(
+  players: Player[],
+  roundCount: number
+): Round[] {
+  const candidates: PairingScheduleCandidate[] = [];
+
+  for (let attempt = 0; attempt < PAIRING_SCHEDULE_ATTEMPTS; attempt++) {
+    const rounds = buildRandomSchedule(players, roundCount);
+    candidates.push({
+      rounds,
+      score: analyzePairingSchedule(rounds, players),
+    });
+  }
+
+  candidates.sort((a, b) => compareScheduleScores(a.score, b.score));
+  const best = candidates[0].score;
+  const essentialFinalists = candidates.filter(
+    (candidate) =>
+      candidate.score.repeatedCompleteTables === best.repeatedCompleteTables &&
+      candidate.score.repeatedTrios === best.repeatedTrios
+  );
+  const finalists = essentialFinalists.slice(0, RANDOM_FINALIST_COUNT);
+  return finalists[Math.floor(Math.random() * finalists.length)].rounds;
+}
+
+export function generateSwissRounds(
+  players: Player[],
+  roundCount: number
+): Round[] {
+  return generateDiverseRandomSchedule(players, roundCount);
 }
 
 export function generateFlexibleSwissRoundsOneAndTwo(players: Player[]): Round[] {

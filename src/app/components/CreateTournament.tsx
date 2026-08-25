@@ -57,6 +57,8 @@ export default function CreateTournament() {
   );
   const [includeFourthDoublesRound, setIncludeFourthDoublesRound] =
     useState(false);
+  const [includeFourthOpenTableRound, setIncludeFourthOpenTableRound] =
+    useState(false);
 
   const minPlayers = modality === 'doubles_cmd' ? 4 : modality === 'weekly_pauper' ? 1 : 3;
   const playerCountOk =
@@ -150,6 +152,8 @@ export default function CreateTournament() {
       modality,
       doublesIncludeFourthSwissRound:
         modality === 'doubles_cmd' ? includeFourthDoublesRound : null,
+      openTableIncludeFourthRound:
+        modality === 'cmd_open_table' ? includeFourthOpenTableRound : null,
       pointsDoubled: false,
     };
 
@@ -255,8 +259,10 @@ export default function CreateTournament() {
               )}
               {modality === 'cmd_open_table' && (
                 <>
-                  Mesmas regras e pontuação da Liga CMD 100 semanal; apenas o
-                  rótulo do evento é “mesão livre”.
+                  Mesmas regras e pontuação da Liga CMD 100 semanal, mas sem
+                  somar no ranking geral. Por padrão são 2 rodadas suíças e a
+                  mesa final; marque a opção abaixo para incluir uma terceira
+                  suíça, totalizando 4 rodadas.
                 </>
               )}
               {modality === 'weekly_pauper' && (
@@ -297,6 +303,39 @@ export default function CreateTournament() {
                     (suíça extra; no máximo 4 rodadas, sem rodada depois da mesa
                     dos líderes). Com menos de 8 duplas esta opção é ignorada
                     (2 rodadas).
+                  </label>
+                </div>
+              </div>
+            )}
+            {modality === 'cmd_open_table' && (
+              <div
+                className="flex flex-col gap-2 rounded-lg border border-amber-900/45 bg-amber-950/25 p-4"
+                role="group"
+                aria-labelledby="open-table-fourth-round-title"
+              >
+                <p
+                  id="open-table-fourth-round-title"
+                  className="text-sm font-medium text-amber-200/95"
+                >
+                  Formato com 4 rodadas
+                </p>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="open-table-fourth-round"
+                    checked={includeFourthOpenTableRound}
+                    onCheckedChange={(c) =>
+                      setIncludeFourthOpenTableRound(c === true)
+                    }
+                    className="mt-0.5 border-slate-500 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-500"
+                  />
+                  <label
+                    htmlFor="open-table-fourth-round"
+                    className="text-sm text-slate-300 leading-relaxed cursor-pointer select-none"
+                  >
+                    Incluir uma terceira rodada suíça antes da mesa final,
+                    totalizando <span className="text-slate-200">4 rodadas</span>.
+                    Esta opção é exclusiva do CMD mesão livre e não altera a
+                    Liga CMD 100 semanal.
                   </label>
                 </div>
               </div>
