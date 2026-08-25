@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "test:pairings": "tsx scripts/test-pairings.ts",
     "dev": "vite",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
