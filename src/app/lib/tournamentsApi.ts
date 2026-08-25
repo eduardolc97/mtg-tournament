@@ -24,6 +24,7 @@ type TournamentWire = Omit<
   | 'leagueMonth'
   | 'modality'
   | 'doublesIncludeFourthSwissRound'
+  | 'openTableIncludeFourthRound'
   | 'pointsDoubled'
   | 'players'
 > & {
@@ -32,6 +33,7 @@ type TournamentWire = Omit<
   leagueMonth?: number;
   modality?: string;
   doublesIncludeFourthSwissRound?: boolean | null;
+  openTableIncludeFourthRound?: boolean | null;
   pointsDoubled?: boolean;
 };
 
@@ -44,6 +46,7 @@ type TournamentRow = {
   league_month: number;
   modality: string;
   doubles_include_fourth_swiss_round: boolean | null;
+  open_table_include_fourth_round: boolean | null;
   points_doubled: boolean;
 };
 
@@ -96,6 +99,9 @@ export function parseTournament(
   } else if (raw.doublesIncludeFourthSwissRound === false) {
     doublesFourth = false;
   }
+  const openTableFourth = normalizeOptionalBoolean(
+    raw.openTableIncludeFourthRound
+  );
 
   const base = {
     id: raw.id,
@@ -106,6 +112,7 @@ export function parseTournament(
     leagueMonth: coerceLeagueInt(raw.leagueMonth, createdAt.getMonth() + 1),
     modality: normalizeTournamentModality(raw.modality),
     doublesIncludeFourthSwissRound: doublesFourth,
+    openTableIncludeFourthRound: openTableFourth,
     pointsDoubled: raw.pointsDoubled === true,
   };
 
@@ -126,6 +133,11 @@ function serializeTournament(t: Tournament): TournamentWire {
       t.doublesIncludeFourthSwissRound === false
         ? t.doublesIncludeFourthSwissRound
         : null,
+    openTableIncludeFourthRound:
+      t.openTableIncludeFourthRound === true ||
+      t.openTableIncludeFourthRound === false
+        ? t.openTableIncludeFourthRound
+        : null,
     pointsDoubled: t.pointsDoubled === true,
   };
 }
@@ -140,6 +152,7 @@ function rowToWire(row: TournamentRow): TournamentWire {
     leagueMonth: row.league_month,
     modality: row.modality,
     doublesIncludeFourthSwissRound: row.doubles_include_fourth_swiss_round,
+    openTableIncludeFourthRound: row.open_table_include_fourth_round,
     pointsDoubled: row.points_doubled === true,
   };
 }
@@ -163,7 +176,7 @@ function isValidModality(m: unknown): m is string {
   );
 }
 
-function normalizeDoublesFourth(v: unknown): boolean | null {
+function normalizeOptionalBoolean(v: unknown): boolean | null {
   if (v === true) {
     return true;
   }
@@ -218,8 +231,11 @@ function wireToInsertRow(w: TournamentWire): TournamentRow {
     league_year: w.leagueYear!,
     league_month: w.leagueMonth!,
     modality: mod,
-    doubles_include_fourth_swiss_round: normalizeDoublesFourth(
+    doubles_include_fourth_swiss_round: normalizeOptionalBoolean(
       w.doublesIncludeFourthSwissRound,
+    ),
+    open_table_include_fourth_round: normalizeOptionalBoolean(
+      w.openTableIncludeFourthRound,
     ),
     points_doubled: w.pointsDoubled === true,
   };
@@ -233,8 +249,11 @@ function wireToUpdateRow(w: TournamentWire): Omit<TournamentRow, 'id'> {
     league_year: w.leagueYear!,
     league_month: w.leagueMonth!,
     modality: normalizeTournamentModality(w.modality),
-    doubles_include_fourth_swiss_round: normalizeDoublesFourth(
+    doubles_include_fourth_swiss_round: normalizeOptionalBoolean(
       w.doublesIncludeFourthSwissRound,
+    ),
+    open_table_include_fourth_round: normalizeOptionalBoolean(
+      w.openTableIncludeFourthRound,
     ),
     points_doubled: w.pointsDoubled === true,
   };

@@ -45,6 +45,7 @@ export interface Tournament {
   leagueMonth: number;
   modality: TournamentModality;
   doublesIncludeFourthSwissRound?: boolean | null;
+  openTableIncludeFourthRound?: boolean | null;
   pointsDoubled?: boolean;
 }
 

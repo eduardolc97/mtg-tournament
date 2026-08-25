@@ -8,7 +8,8 @@ export function expectedSwissRoundsForTournament(t: Tournament): number {
   return expectedSwissRoundCount(
     normalizeTournamentModality(t.modality),
     t.players.length,
-    t.doublesIncludeFourthSwissRound
+    t.doublesIncludeFourthSwissRound,
+    t.openTableIncludeFourthRound
   );
 }
 

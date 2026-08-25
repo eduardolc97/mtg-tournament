@@ -326,11 +326,17 @@ function generateRoundWithPairing(
 }
 
 export function generateSwissRoundsOneAndTwo(players: Player[]): Round[] {
+  return generateSwissRounds(players, 2);
+}
+
+export function generateSwissRounds(
+  players: Player[],
+  roundCount: number
+): Round[] {
   const rounds: Round[] = [];
-  const r1 = generateRoundWithPairing(players, 1, []);
-  rounds.push(r1);
-  const r2 = generateRoundWithPairing(players, 2, rounds);
-  rounds.push(r2);
+  for (let roundNumber = 1; roundNumber <= roundCount; roundNumber++) {
+    rounds.push(generateRoundWithPairing(players, roundNumber, rounds));
+  }
   return rounds;
 }
 

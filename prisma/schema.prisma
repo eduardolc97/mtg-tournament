@@ -16,6 +16,7 @@ model Tournament {
   leagueMonth                    Int                     @map("league_month")
   modality                       String                  @default("weekly_cmd100")
   doublesIncludeFourthSwissRound Boolean?                @map("doubles_include_fourth_swiss_round")
+  openTableIncludeFourthRound    Boolean?                @map("open_table_include_fourth_round")
   pointsDoubled                  Boolean                 @default(false) @map("points_doubled")
   participants                   TournamentParticipant[]
 
