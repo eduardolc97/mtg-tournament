@@ -9,13 +9,8 @@ import React, {
 import { Player, Tournament, TableResult } from '../types/tournament';
 import type { PlayerProfile } from '../types/player';
 import { normalizeTournamentModality, isPauperModality } from '../constants/tournamentModality';
-import { expectedSwissRoundsForTournament } from '../utils/tournamentSwiss';
-import {
-  buildDoublesLastSwissRound,
-  buildFinalRoundForTournament,
-  isRoundFullyScored,
-} from '../utils/finalRound';
 import { createEntryId } from '../utils/lateJoinPlayer';
+import { applyTableResults } from '../utils/tournamentResults';
 import {
   DEFAULT_PAUPER_RECORD,
   normalizePauperRecord,
@@ -84,69 +79,6 @@ export const useTournaments = () => {
   return context;
 };
 
-function withUpdatedTableResults(
-  tournament: Tournament,
-  roundId: string,
-  tableId: string,
-  results: TableResult[]
-): Tournament {
-  const nextRounds = tournament.rounds.map((round) => {
-    if (round.id !== roundId) {
-      return round;
-    }
-    return {
-      ...round,
-      tables: round.tables.map((table) => {
-        if (table.id !== tableId) {
-          return table;
-        }
-        return {
-          ...table,
-          results,
-        };
-      }),
-    };
-  });
-
-  let rounds = nextRounds;
-  let next: Tournament = { ...tournament, rounds };
-
-  const modality = normalizeTournamentModality(next.modality);
-  const swissCount = expectedSwissRoundsForTournament(next);
-
-  if (modality === 'doubles_cmd' && swissCount >= 2) {
-    const hasLast = rounds.some((r) => r.number === swissCount);
-    const preliminary = rounds.filter((r) => r.number < swissCount);
-    const preliminaryComplete =
-      preliminary.length === swissCount - 1 &&
-      preliminary.every((r) => isRoundFullyScored(r));
-    if (!hasLast && preliminaryComplete) {
-      const lastSwiss = buildDoublesLastSwissRound(
-        { ...next, rounds },
-        swissCount
-      );
-      rounds = [...rounds, lastSwiss];
-      next = { ...next, rounds };
-    }
-  }
-
-  if (modality !== 'doubles_cmd') {
-    const finalRoundNumber = swissCount + 1;
-    const hasFinal = rounds.some((r) => r.number === finalRoundNumber);
-    const swissRounds = rounds.filter((r) => r.number <= swissCount);
-    const allSwissComplete =
-      swissRounds.length === swissCount &&
-      swissRounds.every((r) => isRoundFullyScored(r));
-    if (!hasFinal && allSwissComplete) {
-      next = {
-        ...next,
-        rounds: [...rounds, buildFinalRoundForTournament({ ...next, rounds })],
-      };
-    }
-  }
-  return next;
-}
-
 export const TournamentProvider = ({ children }: { children: ReactNode }) => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,7 +134,7 @@ export const TournamentProvider = ({ children }: { children: ReactNode }) => {
     if (!current) {
       throw new Error('Tournament not found');
     }
-    const next = withUpdatedTableResults(
+    const next = applyTableResults(
       current,
       roundId,
       tableId,

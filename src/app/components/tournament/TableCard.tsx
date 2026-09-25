@@ -13,6 +13,7 @@ import {
 import { Users, Trophy, Medal, Award, Check, Equal } from 'lucide-react';
 import {
   POINTS_MAP,
+  buildTableResults,
   pointsFromOutcome,
   outcomeLabel,
 } from '../../utils/scoring';
@@ -71,40 +72,11 @@ function buildResultsFromSelections(
   table: Table,
   selections: Record<string, string>
 ): TableResult[] | null {
-  const maxPlace = table.players.length;
-  for (const p of table.players) {
-    if (!selections[p.id]) {
-      return null;
-    }
-  }
-  const outcomes: TableOutcome[] = [];
-  for (const p of table.players) {
-    const o = selectValueToOutcome(selections[p.id]);
-    if (!o) {
-      return null;
-    }
-    if (o.type === 'place' && (o.place < 1 || o.place > maxPlace)) {
-      return null;
-    }
-    outcomes.push(o);
-  }
-  const usedPlaces = new Set<number>();
-  for (const o of outcomes) {
-    if (o.type === 'place') {
-      if (usedPlaces.has(o.place)) {
-        return null;
-      }
-      usedPlaces.add(o.place);
-    }
-  }
-  return table.players.map((player) => {
-    const o = selectValueToOutcome(selections[player.id])!;
-    return {
-      playerId: player.id,
-      outcome: o,
-      points: pointsFromOutcome(o, maxPlace),
-    };
+  const outcomes = table.players.map((player) => {
+    const selection = selections[player.id];
+    return selection ? selectValueToOutcome(selection) : null;
   });
+  return buildTableResults(table.players, outcomes);
 }
 
 function resultsEqual(a: TableResult[] | undefined, b: TableResult[]): boolean {
