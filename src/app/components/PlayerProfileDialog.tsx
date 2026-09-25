@@ -33,6 +33,7 @@ export interface PlayerProfileDialogProps {
   saving?: boolean;
   showPauperFields?: boolean;
   pointsDoubled?: boolean;
+  allowNicknameEdit?: boolean;
 }
 
 export default function PlayerProfileDialog({
@@ -45,6 +46,7 @@ export default function PlayerProfileDialog({
   saving = false,
   showPauperFields = false,
   pointsDoubled = false,
+  allowNicknameEdit = false,
 }: PlayerProfileDialogProps) {
   const [nickname, setNickname] = useState(initialNickname);
   const [fullName, setFullName] = useState('');
@@ -77,7 +79,9 @@ export default function PlayerProfileDialog({
     });
   };
 
-  const title = existing
+  const title = allowNicknameEdit
+    ? 'Editar jogador'
+    : existing
     ? requireFullName
       ? 'Complete o cadastro do jogador'
       : 'Adicionar jogador'
@@ -106,7 +110,9 @@ export default function PlayerProfileDialog({
                 ? requireFullName
                   ? 'Cadastre o jogador e informe o resultado do torneio (V/D/E e aproveitamento).'
                   : 'Confirme os dados e informe o resultado do torneio (V/D/E e aproveitamento).'
-                : requireFullName
+                : allowNicknameEdit
+                  ? 'Confirme as alterações. O apelido anterior continuará associado a este jogador.'
+                  : requireFullName
                   ? 'O nome completo é obrigatório para identificar o jogador na liga mensal.'
                   : 'Você pode atualizar os dados antes de adicionar ao torneio.'}
             </DialogDescription>
@@ -121,7 +127,7 @@ export default function PlayerProfileDialog({
                 id="player-nickname"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                disabled={!!existing}
+                disabled={!!existing && !allowNicknameEdit}
                 className="bg-slate-800/50 border-slate-700 text-white"
                 autoComplete="off"
               />

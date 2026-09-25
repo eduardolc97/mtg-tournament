@@ -7,4 +7,5 @@ grant all privileges on all sequences in schema public to anon, authenticated;
 
 grant select, insert, update, delete on public.tournaments to anon, authenticated;
 grant select, insert, update, delete on public.players to anon, authenticated;
+grant select, insert, update, delete on public.player_aliases to anon, authenticated;
 grant select, insert, update, delete on public.tournament_participants to anon, authenticated;
