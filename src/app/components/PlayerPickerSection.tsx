@@ -202,9 +202,8 @@ export default function PlayerPickerSection({
   };
 
   const addExistingPlayer = async (profile: PlayerProfile) => {
-    const requireFullName = !profile.fullName?.trim();
-    if (showPauperFields || requireFullName) {
-      openPlayerDialog(profile.nickname, profile, requireFullName);
+    if (showPauperFields) {
+      openPlayerDialog(profile.nickname, profile, !profile.fullName?.trim());
       return;
     }
     setSuggestOpen(false);
@@ -428,12 +427,12 @@ export default function PlayerPickerSection({
               disabled={disabled}
               onChange={(e) => {
                 setPlayerName(e.target.value);
-                if (registry.length > 0) {
+                if (!disabled) {
                   setSuggestOpen(true);
                 }
               }}
               onFocus={() => {
-                if (registry.length > 0 && !disabled) {
+                if (!disabled) {
                   setSuggestOpen(true);
                 }
               }}
@@ -529,7 +528,7 @@ export default function PlayerPickerSection({
       </div>
 
       {useBulkNameImport && (
-        <div className="space-y-3">
+        <div className="mt-6 space-y-3 border-t border-slate-700 pt-5">
           <label
             htmlFor="bulk-player-names"
             className="text-sm font-medium text-slate-300"
