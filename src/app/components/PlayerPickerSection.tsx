@@ -382,7 +382,7 @@ export default function PlayerPickerSection({
   const pickerDescription = showPauperFields
     ? 'Digite o apelido ou escolha da lista — o popup abre para confirmar cadastro e resultado Pauper.'
     : useBulkNameImport
-      ? 'Cole os nomes antes de começar; cada jogador será revisado antes de ser adicionado.'
+      ? 'Adicione jogadores pela busca ou cole uma lista para revisar antes de adicionar.'
       : description;
 
   return (
@@ -417,8 +417,7 @@ export default function PlayerPickerSection({
         </p>
       )}
 
-      {!useBulkNameImport ? (
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
           <div
             ref={suggestContainerRef}
             className="relative flex-1 min-w-0 w-full"
@@ -527,8 +526,9 @@ export default function PlayerPickerSection({
             <UserPlus className="w-4 h-4 mr-2" />
             Adicionar
           </Button>
-        </div>
-      ) : (
+      </div>
+
+      {useBulkNameImport && (
         <div className="space-y-3">
           <label
             htmlFor="bulk-player-names"
