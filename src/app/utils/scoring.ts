@@ -1,4 +1,4 @@
-import type { TableOutcome } from '../types/tournament';
+import type { Player, TableOutcome, TableResult } from '../types/tournament';
 
 export const POINTS_MAP: Record<number, number> = {
   1: 5,
@@ -17,6 +17,42 @@ export function pointsFromOutcome(outcome: TableOutcome, maxPlace: number): numb
     return 0;
   }
   return POINTS_MAP[outcome.place] ?? 0;
+}
+
+export function buildTableResults(
+  players: Player[],
+  outcomes: Array<TableOutcome | null>
+): TableResult[] | null {
+  if (outcomes.length !== players.length) {
+    return null;
+  }
+
+  const maxPlace = players.length;
+  const usedPlaces = new Set<number>();
+
+  for (const outcome of outcomes) {
+    if (!outcome) {
+      return null;
+    }
+    if (outcome.type === 'place') {
+      if (outcome.place < 1 || outcome.place > maxPlace) {
+        return null;
+      }
+      if (usedPlaces.has(outcome.place)) {
+        return null;
+      }
+      usedPlaces.add(outcome.place);
+    }
+  }
+
+  return players.map((player, index) => {
+    const outcome = outcomes[index]!;
+    return {
+      playerId: player.id,
+      outcome,
+      points: pointsFromOutcome(outcome, maxPlace),
+    };
+  });
 }
 
 export function outcomeLabel(outcome: TableOutcome): string {
