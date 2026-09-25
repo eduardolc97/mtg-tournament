@@ -32,8 +32,20 @@ model Player {
   createdAt     DateTime                @default(now()) @map("created_at")
   updatedAt     DateTime                @updatedAt @map("updated_at")
   participants  TournamentParticipant[]
+  aliases       PlayerAlias[]
 
   @@map("players")
+}
+
+model PlayerAlias {
+  aliasKey  String   @id @map("alias_key")
+  alias     String   @map("alias")
+  playerId  String   @map("player_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@map("player_aliases")
 }
 
 model TournamentParticipant {
