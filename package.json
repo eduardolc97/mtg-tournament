@@ -6,6 +6,7 @@
   "scripts": {
     "build": "vite build",
     "test:pairings": "tsx scripts/test-pairings.ts",
+    "test:ranking": "tsx scripts/test-ranking.ts",
     "dev": "vite",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
