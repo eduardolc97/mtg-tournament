@@ -1,11 +1,8 @@
 import { normalizeTournamentModality } from '../constants/tournamentModality';
 import type { TableResult, Tournament } from '../types/tournament';
-import { expectedSwissRoundsForTournament } from './tournamentSwiss';
-import {
-  buildDoublesLastSwissRound,
-  buildFinalRoundForTournament,
-  isRoundFullyScored,
-} from './finalRound';
+import { plannedRoundsForTournament } from './tournamentSwiss';
+import { buildSinglesStandingsRound, buildDoublesStandingsRound } from './standingsPairing';
+import { isRoundFullyScored } from './finalRound';
 
 /**
  * Applies a table result and creates the next round when the existing
@@ -36,44 +33,21 @@ export function applyTableResults(
     };
   });
 
-  let rounds = nextRounds;
-  let next: Tournament = { ...tournament, rounds };
-
+  const next: Tournament = { ...tournament, rounds: nextRounds };
   const modality = normalizeTournamentModality(next.modality);
-  const swissCount = expectedSwissRoundsForTournament(next);
+  if (modality === 'weekly_pauper') return next;
 
-  if (modality === 'doubles_cmd' && swissCount >= 2) {
-    const hasLast = rounds.some((round) => round.number === swissCount);
-    const preliminary = rounds.filter((round) => round.number < swissCount);
-    const preliminaryComplete =
-      preliminary.length === swissCount - 1 &&
-      preliminary.every((round) => isRoundFullyScored(round));
-    if (!hasLast && preliminaryComplete) {
-      const lastSwiss = buildDoublesLastSwissRound(
-        { ...next, rounds },
-        swissCount
-      );
-      rounds = [...rounds, lastSwiss];
-      next = { ...next, rounds };
-    }
+  const planned = plannedRoundsForTournament(next);
+  const latest = Math.max(0, ...nextRounds.map(round => round.number));
+  // Editing an older round only changes that result. Never rebuild existing tables.
+  if (latest === 0 || latest >= planned || !Array.from({ length: latest }, (_, i) => i + 1)
+    .every(number => isRoundFullyScored(nextRounds.find(round => round.number === number)))) {
+    return next;
   }
-
-  if (modality !== 'doubles_cmd') {
-    const finalRoundNumber = swissCount + 1;
-    const hasFinal = rounds.some(
-      (round) => round.number === finalRoundNumber
-    );
-    const swissRounds = rounds.filter((round) => round.number <= swissCount);
-    const allSwissComplete =
-      swissRounds.length === swissCount &&
-      swissRounds.every((round) => isRoundFullyScored(round));
-    if (!hasFinal && allSwissComplete) {
-      next = {
-        ...next,
-        rounds: [...rounds, buildFinalRoundForTournament({ ...next, rounds })],
-      };
-    }
-  }
-
-  return next;
+  const number = latest + 1;
+  const final = number === planned;
+  const round = modality === 'doubles_cmd'
+    ? buildDoublesStandingsRound(next, number, final)
+    : buildSinglesStandingsRound(next, number, final);
+  return { ...next, rounds: [...nextRounds, round] };
 }
