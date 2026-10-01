@@ -462,7 +462,7 @@ export function generateInitialRoundsForTournament(
 
   const rounds = generateSwissRounds(
     tournament.players,
-    expectedSwissRoundsForTournament(tournament)
+    1
   );
   for (const round of rounds) {
     assertStrictMesaSizes(round.tables);
@@ -480,7 +480,7 @@ export function regenerateSwissRoundsOneAndTwoForTournament(
 
   const rounds = generateSwissRounds(
     tournament.players,
-    expectedSwissRoundsForTournament(tournament)
+    1
   );
   for (const round of rounds) {
     assertStrictMesaSizes(round.tables);

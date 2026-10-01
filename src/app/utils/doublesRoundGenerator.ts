@@ -250,18 +250,7 @@ export function generateDoublesSwissRounds(
   }
   const paired = assignDoublesPartners(players);
   const teams = pairedPlayersToTeams(paired);
-  const duplas = teams.length;
-  let swissCount: number;
-  if (duplas < 8) {
-    swissCount = 2;
-  } else {
-    swissCount = includeFourthSwissRound === true ? 4 : 3;
-  }
-  const rounds: Round[] = [];
-  const preGeneratedSwiss = swissCount - 1;
-  for (let r = 1; r <= preGeneratedSwiss; r++) {
-    rounds.push(buildDoublesRound(teams, r, rounds, 1));
-  }
+  const rounds = [buildDoublesRound(teams, 1, [], 1)];
   return { players: paired, rounds };
 }
 

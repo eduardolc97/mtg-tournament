@@ -47,7 +47,7 @@ export default function CurrentRoundIndicator({
 
   const totalTables = currentRound.tables.length;
 
-  const allRoundsComplete = tournament.rounds.every((round) =>
+  const allRoundsComplete = tournament.rounds.length === plannedRounds && tournament.rounds.every((round) =>
     isRoundFullyScored(round)
   );
 
@@ -86,6 +86,11 @@ export default function CurrentRoundIndicator({
                     mesa{totalTables !== 1 ? 's' : ''} completa
                     {totalTables !== 1 ? 's' : ''}
                   </p>
+                  {tournament.rounds.length < plannedRounds && (
+                    <p className="text-slate-400 text-xs mt-1">
+                      A próxima rodada será gerada automaticamente ao salvar a última mesa desta rodada.
+                    </p>
+                  )}
                   {showFinalPendingHint && (
                     <p className="text-slate-400 text-xs mt-1">
                       A última rodada só é criada depois que todas as mesas
