@@ -49,7 +49,28 @@ assert.equal(describe(points), null);
 assert.equal(describe(tournament([[1, 1, 1, 1]])), null);
 assert.equal(describe(tournament([])), null);
 const lowerTie = tournament([[4, 2, 1, 0], [4, 1, 2, 0]]);
-assert.match(describe(lowerTie)!, /Caio ficou à frente de Bia/);
+assert.equal(describe(lowerTie), null);
+// Regression: tied leaders must not produce a notice about lower positions.
+const reportedRanking = [
+  { name: 'Hudson', pointsByRound: [4, 4, 4] },
+  { name: 'Juan', pointsByRound: [4, 4, 4] },
+  { name: 'Abacaxi', pointsByRound: [2, 3, 2] },
+  { name: 'Eduardo', pointsByRound: [4, 1, 1] },
+  { name: 'Alê', pointsByRound: [1, 0, 4] },
+  { name: 'Afonso', pointsByRound: [1, 2, 2] },
+  { name: 'Amanda', pointsByRound: [1, 3, 1] },
+  { name: 'Fabio', pointsByRound: [2, 2, 0] },
+  { name: 'Itão', pointsByRound: [2, 1, 0] },
+  { name: 'Bolls', pointsByRound: [0, 1, 1] },
+  { name: 'Axel', pointsByRound: [1, 0, 1] },
+  { name: 'André', pointsByRound: [0, 0, 1] },
+].map(row => ({
+  ...row,
+  totalPoints: row.pointsByRound.reduce((sum, points) => sum + points, 0),
+  tableWinCount: row.pointsByRound.filter(points => points === 4).length,
+}));
+assert.equal(describeRankingTiebreak(reportedRanking), null);
+assert.equal(describeRankingTiebreak(reportedRanking.slice(1)), null);
 const exactTie = calculatePlayerStats(tournament([[1, 1, 1, 1]]));
 assert.ok(playerStatsAreTied(exactTie[0], exactTie[1]));
 
@@ -94,6 +115,16 @@ assert.match(describeMonthlyLeagueTiebreak(tableWins)!, /primeiros lugares em me
 const shared = aggregateMonthlyLeague([tournament([[1,1,1,1], [1,1,1,1], [1,1,1,1]])], 2026, 10);
 assert.ok(shared.every(row => row.firstPlaceCount === 1));
 assert.equal(describeMonthlyLeagueTiebreak(shared), null);
+const lowerMonthlyTie = [
+  { ...monthly[0], totalPointsInMonth: 20 },
+  { ...monthly[0], key: 'second', totalPointsInMonth: 10 },
+  { ...monthly[1], key: 'third', totalPointsInMonth: 10 },
+];
+assert.equal(describeMonthlyLeagueTiebreak(lowerMonthlyTie), null);
+assert.equal(describeMonthlyLeagueTiebreak([
+  lowerMonthlyTie[0], { ...lowerMonthlyTie[0], key: 'co-leader' },
+  ...lowerMonthlyTie.slice(1),
+]), null);
 assert.deepEqual(aggregateMonthlyLeague([laterRound], 2026, 9), []);
 assert.deepEqual(aggregateMonthlyLeague([{ ...laterRound, modality: 'weekly_pauper' }], 2026, 10), []);
 

@@ -130,27 +130,26 @@ function findDecisiveRoundDifference(
   return null;
 }
 
-/** Explains an actual sporting tiebreak, including ties below first place. */
+/** Explains only a tiebreak that decides first place. */
 export function describeRankingTiebreak(
   snapshots: RankingCompetitorSnapshot[]
 ): string | null {
-  for (let i = 1; i < snapshots.length; i++) {
-    const ahead = snapshots[i - 1];
-    const behind = snapshots[i];
-    if (ahead.totalPoints !== behind.totalPoints || rankingSnapshotsAreTied(ahead, behind)) {
-      continue;
-    }
-    if (ahead.tableWinCount !== behind.tableWinCount) {
-      return `${ahead.name} ficou à frente de ${behind.name} no desempate por vitórias em mesas (${ahead.tableWinCount} contra ${behind.tableWinCount}).`;
-    }
-    const round = findDecisiveRoundDifference(ahead, behind);
-    if (round) {
-      const priority = Array.from(
-        { length: Math.max(ahead.pointsByRound.length, behind.pointsByRound.length) },
-        (_, index) => `R${index + 1}`
-      ).reverse().join(' > ');
-      return `${ahead.name} ficou à frente de ${behind.name} no desempate pela rodada ${round.roundNumber} (${round.winnerPoints} contra ${round.otherPoints} pontos). As rodadas mais recentes têm prioridade: ${priority}.`;
-    }
+  const ahead = snapshots[0];
+  const behind = snapshots[1];
+  if (!ahead || !behind || ahead.totalPoints <= 0 ||
+      ahead.totalPoints !== behind.totalPoints || rankingSnapshotsAreTied(ahead, behind)) {
+    return null;
+  }
+  if (ahead.tableWinCount !== behind.tableWinCount) {
+    return `${ahead.name} ficou à frente de ${behind.name} no desempate por vitórias em mesas (${ahead.tableWinCount} contra ${behind.tableWinCount}).`;
+  }
+  const round = findDecisiveRoundDifference(ahead, behind);
+  if (round) {
+    const priority = Array.from(
+      { length: Math.max(ahead.pointsByRound.length, behind.pointsByRound.length) },
+      (_, index) => `R${index + 1}`
+    ).reverse().join(' > ');
+    return `${ahead.name} ficou à frente de ${behind.name} no desempate pela rodada ${round.roundNumber} (${round.winnerPoints} contra ${round.otherPoints} pontos). As rodadas mais recentes têm prioridade: ${priority}.`;
   }
   return null;
 }

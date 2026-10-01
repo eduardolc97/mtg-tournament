@@ -63,11 +63,11 @@ export function playerNameKey(name: string): string {
 }
 
 export function describeMonthlyLeagueTiebreak(rows: MonthlyLeagueRow[]): string | null {
-  const needed = rows.some((row, index) => {
-    const previous = rows[index - 1];
-    return previous && row.totalPointsInMonth === previous.totalPointsInMonth &&
-      !monthlyLeagueRowsAreTied(row, previous);
-  });
+  const leader = rows[0];
+  const runnerUp = rows[1];
+  const needed = leader && runnerUp && leader.totalPointsInMonth > 0 &&
+    leader.totalPointsInMonth === runnerUp.totalPointsInMonth &&
+    !monthlyLeagueRowsAreTied(leader, runnerUp);
   return needed
     ? 'Critérios de desempate: vitórias em torneios diários, depois primeiros lugares em mesas durante o mês.'
     : null;
