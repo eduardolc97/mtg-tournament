@@ -69,7 +69,16 @@ try {
       const fourSeats = computeTableSizes(count).filter(size => size === 4).length * 4;
       const protectedWinners = second.tables.filter(table => table.players.length === 4)
         .flatMap(table => table.players).filter(player => winners.has(player.id)).length;
-      assert.equal(protectedWinners, Math.min(winners.size, fourSeats), `Winner protection: ${count}`);
+      const expectedProtected = ({ 10: 1, 13: 2, 17: 3 } as Record<number, number>)[count]
+        ?? Math.min(winners.size, fourSeats);
+      assert.equal(protectedWinners, expectedProtected, `Winner distribution: ${count}`);
+      assert.ok(second.tables.every(table => table.players.filter(player => winners.has(player.id)).length <= 2));
+      if ([10, 13, 17].includes(count)) {
+        const threeWinnerCounts = second.tables.filter(table => table.players.length === 3)
+          .map(table => table.players.filter(player => winners.has(player.id)).length);
+        assert.ok(threeWinnerCounts.includes(2), 'Winners displaced to three-seat tables must stay together');
+        assert.ok(!threeWinnerCounts.includes(1), 'Do not isolate a winner at a three-seat table');
+      }
       if (count > 4) {
         const firstTables = new Set(next.rounds[0].tables.map(signature));
         assert.ok(second.tables.every(table => !firstTables.has(signature(table))), `Repeated table: ${count}, seed ${seed}`);

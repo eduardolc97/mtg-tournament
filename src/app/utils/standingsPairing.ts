@@ -68,8 +68,16 @@ export function buildSinglesStandingsRound(
   const fourSeats = sizes.filter(size => size === 4).length * 4;
   const winners = ranked.filter(player => byId.get(player.id)!.tableWinCount > 0);
   const others = ranked.filter(player => byId.get(player.id)!.tableWinCount === 0);
-  // Maximize protected winners; when seats run out, accumulated ranking decides.
-  const fourIds = new Set([...winners, ...others].slice(0, fourSeats).map(player => player.id));
+  // In R2, diversity takes precedence over keeping every winner at a four-seat table.
+  // Move winners to three-seat tables in pairs rather than isolating one there.
+  let fourWinnerCount = Math.min(winners.length, fourSeats);
+  if (number === 2 && sizes.includes(3)) {
+    fourWinnerCount = Math.min(winners.length, (fourSeats / 4) * 2);
+    if (winners.length - fourWinnerCount === 1 && fourWinnerCount > 0) fourWinnerCount--;
+  }
+  const fourIds = new Set([
+    ...winners.slice(0, fourWinnerCount), ...others, ...winners.slice(fourWinnerCount),
+  ].slice(0, fourSeats).map(player => player.id));
   const four = ranked.filter(player => fourIds.has(player.id));
   const three = ranked.filter(player => !fourIds.has(player.id));
   const partition = (fourPool: Player[], threePool: Player[]) => {
@@ -92,9 +100,13 @@ export function buildSinglesStandingsRound(
     let repeats = 0;
     let distance = 0;
     let threePoints = 0;
+    let excessWinners = 0;
+    let loneThreeWinners = 0;
     for (const group of groups) {
       if (previousTables.has(JSON.stringify(group.map(player => player.id).sort()))) repeatedTables++;
       const wins = group.filter(won).length;
+      excessWinners += Math.max(0, wins - 2);
+      if (group.length === 3 && wins === 1) loneThreeWinners++;
       if (group.length === 3) threePoints += group.reduce((sum, player) => sum + score(player), 0);
       // A winner must have another winner or a nearby scorer, when feasible.
       if (wins === 1 && !group.some(player => !won(player) && score(player) >= 2)) isolatedWinners++;
@@ -106,7 +118,7 @@ export function buildSinglesStandingsRound(
         }
       }
     }
-    return [repeatedTables, isolatedWinners, concentratedWinners, threePoints, repeats, distance];
+    return [excessWinners, loneThreeWinners, repeatedTables, isolatedWinners, concentratedWinners, threePoints, repeats, distance];
   };
   let best = partition(four, three);
   let bestCost = cost(best);
