@@ -1,5 +1,7 @@
 import type { Tournament } from '../types/tournament';
 import { countsTowardMonthlyLeague } from '../constants/tournamentModality';
+import { plannedRoundsForTournament } from './tournamentSwiss';
+import { isRoundFullyScored } from './finalRound';
 import {
   calculatePlayerStats,
   playerStatsAreTied,
@@ -20,6 +22,12 @@ function countDailyWinsByGlobalId(
   entryToGlobal: Map<string, string>
 ): Map<string, number> {
   const counts = new Map<string, number>();
+  const plannedRounds = plannedRoundsForTournament(tournament);
+  if (!Array.from({ length: plannedRounds }, (_, index) => index + 1).every(
+    (number) => isRoundFullyScored(tournament.rounds.find((round) => round.number === number))
+  )) {
+    return counts;
+  }
   const stats = calculatePlayerStats(tournament);
   if (stats.length === 0 || stats[0].totalPoints <= 0) {
     return counts;
