@@ -6,9 +6,9 @@ import type {
 import { normalizeTournamentModality } from '../constants/tournamentModality';
 import { getDoublesTeamsFromPlayers } from './doublesRoundGenerator';
 import { pairKey } from './roundGenerator';
-import { TABLE_FIRST_PLACE_POINTS } from './scoring';
+import { isTableWin } from './scoring';
 
-function countFivePointTablesByPlayerId(
+function countTableWinsByPlayerId(
   tournament: Tournament
 ): Map<string, number> {
   const counts = new Map<string, number>();
@@ -19,11 +19,7 @@ function countFivePointTablesByPlayerId(
         continue;
       }
       for (const r of table.results) {
-        const isFirstPlace =
-          r.outcome.type === 'points'
-            ? r.outcome.value === 4
-            : r.points === TABLE_FIRST_PLACE_POINTS;
-        if (!isFirstPlace) {
+        if (!isTableWin(r)) {
           continue;
         }
         counts.set(r.playerId, (counts.get(r.playerId) ?? 0) + 1);
@@ -38,8 +34,8 @@ export function comparePlayerStats(a: PlayerStats, b: PlayerStats): number {
   if (b.totalPoints !== a.totalPoints) {
     return b.totalPoints - a.totalPoints;
   }
-  if (b.fivePointTableCount !== a.fivePointTableCount) {
-    return b.fivePointTableCount - a.fivePointTableCount;
+  if (b.tableWinCount !== a.tableWinCount) {
+    return b.tableWinCount - a.tableWinCount;
   }
   const maxRound = Math.max(a.pointsByRound.length, b.pointsByRound.length);
   for (let i = maxRound - 1; i >= 0; i--) {
@@ -56,7 +52,7 @@ export function playerStatsAreTied(a: PlayerStats, b: PlayerStats): boolean {
   if (a.totalPoints !== b.totalPoints) {
     return false;
   }
-  if (a.fivePointTableCount !== b.fivePointTableCount) {
+  if (a.tableWinCount !== b.tableWinCount) {
     return false;
   }
   const maxRound = Math.max(a.pointsByRound.length, b.pointsByRound.length);
@@ -71,7 +67,7 @@ export function playerStatsAreTied(a: PlayerStats, b: PlayerStats): boolean {
 export interface RankingCompetitorSnapshot {
   name: string;
   totalPoints: number;
-  fivePointTableCount: number;
+  tableWinCount: number;
   pointsByRound: number[];
 }
 
@@ -81,7 +77,7 @@ export function playerStatsToSnapshot(
   return {
     name: stats.playerName,
     totalPoints: stats.totalPoints,
-    fivePointTableCount: stats.fivePointTableCount,
+    tableWinCount: stats.tableWinCount,
     pointsByRound: stats.pointsByRound,
   };
 }
@@ -92,7 +88,7 @@ export function doublesTeamStatsToSnapshot(
   return {
     name: stats.label,
     totalPoints: stats.totalPoints,
-    fivePointTableCount: stats.fivePointTableCount,
+    tableWinCount: stats.tableWinCount,
     pointsByRound: stats.pointsByRound,
   };
 }
@@ -104,7 +100,7 @@ function rankingSnapshotsAreTied(
   if (a.totalPoints !== b.totalPoints) {
     return false;
   }
-  if (a.fivePointTableCount !== b.fivePointTableCount) {
+  if (a.tableWinCount !== b.tableWinCount) {
     return false;
   }
   const maxRound = Math.max(a.pointsByRound.length, b.pointsByRound.length);
@@ -177,9 +173,9 @@ export function describeTopRankingTiebreak(
     const names = formatNameListPt(coChampions.map((row) => row.name));
     const pointsWord = leader.totalPoints === 1 ? 'ponto' : 'pontos';
     const mesasWord =
-      leader.fivePointTableCount === 1
+      leader.tableWinCount === 1
         ? mesasComCincoPontosLabel(1)
-        : mesasComCincoPontosLabel(leader.fivePointTableCount);
+        : mesasComCincoPontosLabel(leader.tableWinCount);
     return `${names} empataram no campeonato com ${leader.totalPoints} ${pointsWord} no total, ${mesasWord} cada e o mesmo resultado em todas as rodadas.`;
   }
 
@@ -192,17 +188,17 @@ export function describeTopRankingTiebreak(
 
   const pointsWord = leader.totalPoints === 1 ? 'ponto' : 'pontos';
 
-  if (leader.fivePointTableCount !== runnerUp.fivePointTableCount) {
-    const diff = leader.fivePointTableCount - runnerUp.fivePointTableCount;
+  if (leader.tableWinCount !== runnerUp.tableWinCount) {
+    const diff = leader.tableWinCount - runnerUp.tableWinCount;
     const mesaWord = diff === 1 ? 'mesa' : 'mesas';
-    return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name}: ambos terminaram com ${leader.totalPoints} ${pointsWord}, mas ${leader.name} venceu ${diff} ${mesaWord} com 5 pontos a mais (${mesasComCincoPontosLabel(leader.fivePointTableCount)} contra ${mesasComCincoPontosLabel(runnerUp.fivePointTableCount)}).`;
+    return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name}: ambos terminaram com ${leader.totalPoints} ${pointsWord}, mas ${leader.name} venceu ${diff} ${mesaWord} com 5 pontos a mais (${mesasComCincoPontosLabel(leader.tableWinCount)} contra ${mesasComCincoPontosLabel(runnerUp.tableWinCount)}).`;
   }
 
   const roundDiff = findDecisiveRoundDifference(leader, runnerUp);
   if (roundDiff) {
     const pointDiff = roundDiff.winnerPoints - roundDiff.otherPoints;
     const pointWord = pointDiff === 1 ? 'ponto' : 'pontos';
-    return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name}: ambos terminaram com ${leader.totalPoints} ${pointsWord} e ${mesasComCincoPontosLabel(leader.fivePointTableCount)}, mas ${leader.name} fez ${pointDiff} ${pointWord} a mais na rodada ${roundDiff.roundNumber} (${roundDiff.winnerPoints} contra ${roundDiff.otherPoints}).`;
+    return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name}: ambos terminaram com ${leader.totalPoints} ${pointsWord} e ${mesasComCincoPontosLabel(leader.tableWinCount)}, mas ${leader.name} fez ${pointDiff} ${pointWord} a mais na rodada ${roundDiff.roundNumber} (${roundDiff.winnerPoints} contra ${roundDiff.otherPoints}).`;
   }
 
   return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name} com ${leader.totalPoints} ${pointsWord} no total.`;
@@ -215,7 +211,7 @@ export function doublesTeamStatsAreTied(
   if (a.totalPoints !== b.totalPoints) {
     return false;
   }
-  if (a.fivePointTableCount !== b.fivePointTableCount) {
+  if (a.tableWinCount !== b.tableWinCount) {
     return false;
   }
   const maxRound = Math.max(a.pointsByRound.length, b.pointsByRound.length);
@@ -234,8 +230,8 @@ export function compareDoublesTeamStats(
   if (b.totalPoints !== a.totalPoints) {
     return b.totalPoints - a.totalPoints;
   }
-  if (b.fivePointTableCount !== a.fivePointTableCount) {
-    return b.fivePointTableCount - a.fivePointTableCount;
+  if (b.tableWinCount !== a.tableWinCount) {
+    return b.tableWinCount - a.tableWinCount;
   }
   const maxRound = Math.max(a.pointsByRound.length, b.pointsByRound.length);
   for (let i = maxRound - 1; i >= 0; i--) {
@@ -254,7 +250,7 @@ export function calculatePlayerStats(tournament: Tournament): PlayerStats[] {
       ? Math.max(...tournament.rounds.map((r) => r.number))
       : 0;
 
-  const fivePointTables = countFivePointTablesByPlayerId(tournament);
+  const tableWins = countTableWinsByPlayerId(tournament);
   const statsMap: Record<string, PlayerStats> = {};
 
   tournament.players.forEach((player) => {
@@ -263,7 +259,7 @@ export function calculatePlayerStats(tournament: Tournament): PlayerStats[] {
       playerName: player.name,
       pointsByRound: Array.from({ length: maxRound }, () => 0),
       totalPoints: 0,
-      fivePointTableCount: fivePointTables.get(player.id) ?? 0,
+      tableWinCount: tableWins.get(player.id) ?? 0,
     };
   });
 
@@ -320,16 +316,16 @@ export function calculateDoublesTeamStats(
           ? sa.totalPoints
           : Math.round((sa.totalPoints + sb.totalPoints) / 2);
     }
-    const fivePointTableCount = Math.max(
-      sa?.fivePointTableCount ?? 0,
-      sb?.fivePointTableCount ?? 0
+    const tableWinCount = Math.max(
+      sa?.tableWinCount ?? 0,
+      sb?.tableWinCount ?? 0
     );
     return {
       teamKey: pairKey(team.a.id, team.b.id),
       label: `${team.a.name} & ${team.b.name}`,
       pointsByRound,
       totalPoints,
-      fivePointTableCount,
+      tableWinCount,
     };
   });
 

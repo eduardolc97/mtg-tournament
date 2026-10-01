@@ -37,7 +37,7 @@ type DisplayRow = {
   key: string;
   label: string;
   totalPoints: number;
-  fivePointTableCount: number;
+  tableWinCount: number;
   position: number;
 };
 
@@ -51,13 +51,13 @@ function toRankedRows(
         key: row.teamKey,
         label: row.label,
         totalPoints: row.totalPoints,
-        fivePointTableCount: row.fivePointTableCount,
+        tableWinCount: row.tableWinCount,
       }))
     : stats.map((row) => ({
         key: row.playerId,
         label: row.playerName,
         totalPoints: row.totalPoints,
-        fivePointTableCount: row.fivePointTableCount,
+        tableWinCount: row.tableWinCount,
       }));
 
   return raw.map((row, index) => ({
@@ -77,9 +77,9 @@ interface WinnerBoxProps {
 
 function WinnerBox({ row }: WinnerBoxProps) {
   const mesasLabel =
-    row.fivePointTableCount === 1
+    row.tableWinCount === 1
       ? '1 mesa com 5 pontos'
-      : `${row.fivePointTableCount} mesas com 5 pontos`;
+      : `${row.tableWinCount} mesas com 5 pontos`;
 
   return (
     <div className="rounded-xl border border-yellow-500/55 bg-gradient-to-r from-yellow-950/50 to-yellow-900/20 px-[clamp(0.75rem,1.5vmin,1.25rem)] py-[clamp(0.5rem,1vmin,0.875rem)]">
@@ -166,7 +166,7 @@ function RankingTable({ rows, doubles }: RankingTableProps) {
               </span>
             </TableCell>
             <TableCell className="px-1 py-[clamp(0.15rem,0.35vmin,0.35rem)] text-center tabular-nums text-slate-300 text-[clamp(0.6875rem,0.42rem+0.75vmin,0.8125rem)]">
-              {row.fivePointTableCount}
+              {row.tableWinCount}
             </TableCell>
           </TableRow>
         ))}

@@ -106,7 +106,7 @@ export function aggregateMonthlyLeague(
       const row = byKey.get(globalId);
       if (row) {
         row.totalPointsInMonth += s.totalPoints;
-        row.tableFirstPlaceCount += s.fivePointTableCount;
+        row.tableFirstPlaceCount += s.tableWinCount;
         row.tournamentsPlayed += 1;
       }
     }
