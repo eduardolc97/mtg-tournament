@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Crown, Trophy } from 'lucide-react';
 import type { MonthlyLeagueRow } from '../utils/monthlyLeague';
-import { monthlyLeagueRowsAreTied } from '../utils/monthlyLeague';
+import { monthlyLeagueRowsAreTied, describeMonthlyLeagueTiebreak } from '../utils/monthlyLeague';
 import {
   Dialog,
   DialogContent,
@@ -64,7 +64,7 @@ function WinnerBox({ row }: WinnerBoxProps) {
             {row.firstPlaceCount !== 1 ? 's' : ''}
             {' · '}
             {row.tableFirstPlaceCount} mesa
-            {row.tableFirstPlaceCount !== 1 ? 's' : ''} 5 pts
+            {row.tableFirstPlaceCount !== 1 ? 's' : ''} vencida{row.tableFirstPlaceCount !== 1 ? 's' : ''}
           </span>
         </div>
       </div>
@@ -98,7 +98,7 @@ function RankingTable({ rows }: RankingTableProps) {
             Vit.D
           </TableHead>
           <TableHead className="h-auto px-1 py-1 text-slate-300 text-center w-10 text-[clamp(0.625rem,0.38rem+0.7vmin,0.75rem)]">
-            5pts
+            Vit.M
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -142,6 +142,7 @@ export default function MonthlyLeaguePresentationDialog({
   rows,
 }: MonthlyLeaguePresentationDialogProps) {
   const rankedRows = useMemo(() => toRankedRows(rows), [rows]);
+  const tiebreakMessage = describeMonthlyLeagueTiebreak(rows);
 
   const leader = rankedRows[0];
 
@@ -182,9 +183,11 @@ export default function MonthlyLeaguePresentationDialog({
             {periodLabel}
           </p>
           <p className="text-slate-500 text-[clamp(0.6875rem,0.42rem+0.65vmin,0.8125rem)]">
-            {eventCount} campeonato{eventCount !== 1 ? 's' : ''} · desempate:
-            vitórias diárias, depois mesas com 5 pts
+            {eventCount} campeonato{eventCount !== 1 ? 's' : ''}
           </p>
+          {tiebreakMessage && (
+            <p className="text-sm text-slate-300">{tiebreakMessage}</p>
+          )}
           <DialogDescription className="sr-only">
             Classificação da liga mensal de {periodLabel} para leitura em grupo.
           </DialogDescription>

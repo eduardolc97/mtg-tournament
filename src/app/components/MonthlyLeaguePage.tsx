@@ -7,6 +7,7 @@ import {
   aggregateMonthlyLeague,
   formatMonthlyLeagueRankingMessage,
   monthLabel,
+  describeMonthlyLeagueTiebreak,
 } from '../utils/monthlyLeague';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -68,6 +69,7 @@ export default function MonthlyLeaguePage() {
     () => aggregateMonthlyLeague(tournaments, year, month),
     [tournaments, year, month]
   );
+  const tiebreakMessage = describeMonthlyLeagueTiebreak(rows);
 
   const eventCount = useMemo(
     () =>
@@ -117,8 +119,7 @@ export default function MonthlyLeaguePage() {
           Soma de pontos só dos campeonatos na modalidade{' '}
           <span className="text-slate-300">Liga CMD 100 semanal</span> (CMD em
           duplas e CMD mesão livre não entram). O mesmo jogador cadastrado em
-          eventos diferentes entra junto (por ID). Desempate (pontos empatados):
-          vitórias diárias, depois mesas em que ganhou 5 pontos (1º na mesa).
+          eventos diferentes entra junto (por ID).
         </p>
 
         <Card className="bg-slate-900/50 border-purple-900/50 backdrop-blur mb-6">
@@ -238,6 +239,9 @@ export default function MonthlyLeaguePage() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
+              {tiebreakMessage && (
+                <p className="px-4 py-3 text-sm text-slate-300">{tiebreakMessage}</p>
+              )}
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -251,7 +255,7 @@ export default function MonthlyLeaguePage() {
                         Vit. diárias
                       </TableHead>
                       <TableHead className="text-slate-300 text-center hidden sm:table-cell">
-                        Mesas 5 pts
+                        Vit. mesas
                       </TableHead>
                       <TableHead className="text-slate-300 text-center hidden md:table-cell">
                         Eventos

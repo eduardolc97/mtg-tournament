@@ -9,6 +9,13 @@ export const POINTS_MAP: Record<number, number> = {
 
 export const TABLE_FIRST_PLACE_POINTS = POINTS_MAP[1];
 
+/** Results retain the outcome even when tournament points are multiplied. */
+export function isTableWin(result: TableResult): boolean {
+  return result.outcome.type === 'place'
+    ? result.outcome.place === 1
+    : result.outcome.type === 'points' && result.outcome.value === 4;
+}
+
 export function pointsFromOutcome(outcome: TableOutcome, maxPlace: number): number {
   if (outcome.type === 'points') {
     return outcome.value;
