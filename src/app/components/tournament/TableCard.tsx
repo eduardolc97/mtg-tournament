@@ -11,12 +11,12 @@ import {
   SelectValue,
 } from '../ui/select';
 import { Users, Trophy, Medal, Award, Check, Equal } from 'lucide-react';
+import { pointsFromOutcome } from '../../utils/scoring';
 import {
-  POINTS_MAP,
-  buildTableResults,
-  pointsFromOutcome,
-  outcomeLabel,
-} from '../../utils/scoring';
+  buildCommanderTableResults,
+  commanderScoreOptions,
+  scoreFromCommanderOutcome,
+} from '../../utils/commanderTableScoring';
 import {
   buildDoublesTeamTableResults,
   parseDoublesMesaOutcomeFromResults,
@@ -49,6 +49,7 @@ const positionColors: Record<number, string> = {
 };
 
 function outcomeToSelectValue(outcome: TableOutcome): string {
+  if (outcome.type === 'points') return String(outcome.value);
   if (outcome.type === 'tie') {
     return 'tie';
   }
@@ -56,6 +57,10 @@ function outcomeToSelectValue(outcome: TableOutcome): string {
 }
 
 function selectValueToOutcome(value: string): TableOutcome | null {
+  if (/^[0-4]$/.test(value)) {
+    const points = Number(value) as 0 | 1 | 2 | 3 | 4;
+    return { type: 'points', value: points };
+  }
   if (value === 'tie') {
     return { type: 'tie' };
   }
@@ -66,17 +71,6 @@ function selectValueToOutcome(value: string): TableOutcome | null {
     }
   }
   return null;
-}
-
-function buildResultsFromSelections(
-  table: Table,
-  selections: Record<string, string>
-): TableResult[] | null {
-  const outcomes = table.players.map((player) => {
-    const selection = selections[player.id];
-    return selection ? selectValueToOutcome(selection) : null;
-  });
-  return buildTableResults(table.players, outcomes);
 }
 
 function resultsEqual(a: TableResult[] | undefined, b: TableResult[]): boolean {
@@ -97,6 +91,9 @@ function resultsEqual(a: TableResult[] | undefined, b: TableResult[]): boolean {
     }
     if (r.outcome.type === 'place' && x.outcome.type === 'place') {
       return r.outcome.place === x.outcome.place;
+    }
+    if (r.outcome.type === 'points' && x.outcome.type === 'points') {
+      return r.outcome.value === x.outcome.value;
     }
     return false;
   });
@@ -168,7 +165,7 @@ export default function TableCard({
       }
       return buildDoublesTeamTableResults(table.players, mesaOutcome);
     }
-    return buildResultsFromSelections(table, selections);
+    return buildCommanderTableResults(table.players, selections);
   }, [doublesTeamScoring, table, mesaOutcome, selections]);
 
   const handleSaveResults = async () => {
@@ -194,10 +191,13 @@ export default function TableCard({
     draftResults !== null &&
     (!table.results || !resultsEqual(table.results, draftResults));
 
-  const placeOptions = useMemo(
-    () => Array.from({ length: maxPlace }, (_, i) => i + 1),
-    [maxPlace]
-  );
+  const selectedPointTotal = Object.values(selections).reduce((total, value) => {
+    const points = Number(value);
+    return Number.isInteger(points) ? total + points : total;
+  }, 0);
+  const selectedPlayersCount = Object.values(selections).filter((value) =>
+    commanderScoreOptions(maxPlace).some((score) => String(score) === value)
+  ).length;
 
   const playerBlocks: Player[][] =
     doublesTableLayout && table.players.length === 4
@@ -351,6 +351,10 @@ export default function TableCard({
                   {block.map((player) => {
                     const value = selections[player.id];
                     const outcome = value ? selectValueToOutcome(value) : null;
+                    const commanderPoints = outcome
+                      ? scoreFromCommanderOutcome(outcome) ??
+                        pointsFromOutcome(outcome, maxPlace)
+                      : null;
                     const Icon =
                       outcome?.type === 'tie'
                         ? Equal
@@ -366,19 +370,7 @@ export default function TableCard({
                           ? 'text-cyan-400'
                           : 'text-slate-400';
 
-                    const usedByOthers = new Set<number>();
-                    for (const p of table.players) {
-                      if (p.id === player.id) {
-                        continue;
-                      }
-                      const v = selections[p.id];
-                      if (v?.startsWith('place:')) {
-                        usedByOthers.add(parseInt(v.slice(6), 10));
-                      }
-                    }
-
-                    const previewPoints =
-                      outcome && pointsFromOutcome(outcome, maxPlace);
+                    const previewPoints = commanderPoints;
 
                     return (
                       <div
@@ -397,31 +389,22 @@ export default function TableCard({
                             <SelectValue placeholder="Resultado" />
                           </SelectTrigger>
                           <SelectContent className="bg-slate-800 border-slate-700">
-                            {placeOptions.map((pos) => {
-                              const taken =
-                                usedByOthers.has(pos) &&
-                                value !== `place:${pos}`;
+                            {commanderScoreOptions(maxPlace).map((points) => {
                               return (
                                 <SelectItem
-                                  key={pos}
-                                  value={`place:${pos}`}
-                                  disabled={taken}
+                                  key={points}
+                                  value={String(points)}
                                   className="text-white hover:bg-slate-700"
                                 >
-                                  {outcomeLabel({
-                                    type: 'place',
-                                    place: pos as 1 | 2 | 3 | 4,
-                                  })}{' '}
-                                  ({POINTS_MAP[pos] ?? 0} pts)
+                                  {points === 4 ? 'Vencedor — 4 pontos' : `${points} ponto${points === 1 ? '' : 's'}`}
                                 </SelectItem>
                               );
                             })}
-                            <SelectItem
-                              value="tie"
-                              className="text-white hover:bg-slate-700"
-                            >
-                              Empate (1 pt)
-                            </SelectItem>
+                            {table.results?.find((result) => result.playerId === player.id && result.outcome.type !== 'points') && (
+                              <SelectItem value={value} className="text-slate-400">
+                                Resultado salvo ({table.results.find((result) => result.playerId === player.id)?.points} pontos)
+                              </SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                         {previewPoints !== undefined && (
@@ -436,6 +419,12 @@ export default function TableCard({
               </div>
             ))}
           </div>
+        )}
+
+        {!doublesTeamScoring && (
+          <p className="text-xs text-slate-400 mt-3" aria-live="polite">
+            Pontos selecionados: {selectedPointTotal} / {selectedPlayersCount} de {table.players.length} jogadores
+          </p>
         )}
 
         <Button
