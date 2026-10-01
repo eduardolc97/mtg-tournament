@@ -11,7 +11,7 @@ import { Target, Circle, Maximize2, Sparkles, Loader2, RefreshCw } from 'lucide-
 import TableCard from './TableCard';
 import RoundPresentationDialog from './RoundPresentationDialog';
 import { isRoundFullyScored } from '../../utils/finalRound';
-import { expectedSwissRoundsForTournament } from '../../utils/tournamentSwiss';
+
 import { toast } from 'sonner';
 
 interface RoundsTabProps {
@@ -31,7 +31,7 @@ export default function RoundsTab({
     normalizeTournamentModality(tournament.modality) !== 'doubles_cmd';
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const preliminaryRoundCount = expectedSwissRoundsForTournament(tournament);
+
   const [presentationRoundId, setPresentationRoundId] = useState<string | null>(
     null
   );
@@ -81,7 +81,7 @@ export default function RoundsTab({
     try {
       await onRegenerateRounds(tournament.id);
       toast.success(
-        `Mesas das ${preliminaryRoundCount} rodadas preliminares regeneradas!`
+        'Mesas da primeira rodada regeneradas!'
       );
     } catch (e) {
       toast.error(
@@ -161,7 +161,7 @@ export default function RoundsTab({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-purple-900/50 bg-slate-900/40 px-4 py-3">
           <p className="text-sm text-slate-300">
             Nenhuma mesa finalizada ainda. Você pode sortear novamente as mesas
-            das {preliminaryRoundCount} rodadas preliminares.
+            da primeira rodada. As próximas serão geradas ao concluir a rodada anterior.
           </p>
           <Button
             type="button"
