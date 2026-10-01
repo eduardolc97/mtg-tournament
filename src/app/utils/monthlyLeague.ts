@@ -62,6 +62,17 @@ export function playerNameKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
+export function describeMonthlyLeagueTiebreak(rows: MonthlyLeagueRow[]): string | null {
+  const needed = rows.some((row, index) => {
+    const previous = rows[index - 1];
+    return previous && row.totalPointsInMonth === previous.totalPointsInMonth &&
+      !monthlyLeagueRowsAreTied(row, previous);
+  });
+  return needed
+    ? 'Critérios de desempate: vitórias em torneios diários, depois primeiros lugares em mesas durante o mês.'
+    : null;
+}
+
 export function aggregateMonthlyLeague(
   tournaments: Tournament[],
   leagueYear: number,

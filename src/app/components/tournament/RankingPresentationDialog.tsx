@@ -5,7 +5,7 @@ import type { DoublesTeamStats, PlayerStats, Tournament } from '../../types/tour
 import {
   calculateDoublesTeamStats,
   calculatePlayerStats,
-  describeTopRankingTiebreak,
+  describeRankingTiebreak,
   doublesTeamStatsAreTied,
   doublesTeamStatsToSnapshot,
   playerStatsAreTied,
@@ -78,8 +78,8 @@ interface WinnerBoxProps {
 function WinnerBox({ row }: WinnerBoxProps) {
   const mesasLabel =
     row.tableWinCount === 1
-      ? '1 mesa com 5 pontos'
-      : `${row.tableWinCount} mesas com 5 pontos`;
+      ? '1 vitória em mesa'
+      : `${row.tableWinCount} vitórias em mesas`;
 
   return (
     <div className="rounded-xl border border-yellow-500/55 bg-gradient-to-r from-yellow-950/50 to-yellow-900/20 px-[clamp(0.75rem,1.5vmin,1.25rem)] py-[clamp(0.5rem,1vmin,0.875rem)]">
@@ -142,7 +142,7 @@ function RankingTable({ rows, doubles }: RankingTableProps) {
             Total
           </TableHead>
           <TableHead className="h-auto px-1 py-1 text-slate-300 text-center min-w-[3.5rem] text-[clamp(0.625rem,0.38rem+0.7vmin,0.75rem)]">
-            Mesas 5 pts
+            Vit. mesas
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -194,7 +194,7 @@ export default function RankingPresentationDialog({
     const snapshots = doubles
       ? teamStats.map(doublesTeamStatsToSnapshot)
       : stats.map(playerStatsToSnapshot);
-    return describeTopRankingTiebreak(snapshots);
+    return describeRankingTiebreak(snapshots);
   }, [doubles, stats, teamStats]);
 
   const winners = useMemo(() => {

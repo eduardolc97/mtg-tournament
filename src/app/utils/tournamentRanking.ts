@@ -112,26 +112,6 @@ function rankingSnapshotsAreTied(
   return true;
 }
 
-function formatNameListPt(names: string[]): string {
-  if (names.length === 0) {
-    return '';
-  }
-  if (names.length === 1) {
-    return names[0];
-  }
-  if (names.length === 2) {
-    return `${names[0]} e ${names[1]}`;
-  }
-  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
-}
-
-function mesasComCincoPontosLabel(count: number): string {
-  if (count === 1) {
-    return '1 mesa com 5 pontos';
-  }
-  return `${count} mesas com 5 pontos`;
-}
-
 function findDecisiveRoundDifference(
   winner: RankingCompetitorSnapshot,
   other: RankingCompetitorSnapshot
@@ -150,58 +130,29 @@ function findDecisiveRoundDifference(
   return null;
 }
 
-export function describeTopRankingTiebreak(
+/** Explains an actual sporting tiebreak, including ties below first place. */
+export function describeRankingTiebreak(
   snapshots: RankingCompetitorSnapshot[]
 ): string | null {
-  if (snapshots.length < 2 || snapshots[0].totalPoints <= 0) {
-    return null;
+  for (let i = 1; i < snapshots.length; i++) {
+    const ahead = snapshots[i - 1];
+    const behind = snapshots[i];
+    if (ahead.totalPoints !== behind.totalPoints || rankingSnapshotsAreTied(ahead, behind)) {
+      continue;
+    }
+    if (ahead.tableWinCount !== behind.tableWinCount) {
+      return `${ahead.name} ficou à frente de ${behind.name} no desempate por vitórias em mesas (${ahead.tableWinCount} contra ${behind.tableWinCount}).`;
+    }
+    const round = findDecisiveRoundDifference(ahead, behind);
+    if (round) {
+      const priority = Array.from(
+        { length: Math.max(ahead.pointsByRound.length, behind.pointsByRound.length) },
+        (_, index) => `R${index + 1}`
+      ).reverse().join(' > ');
+      return `${ahead.name} ficou à frente de ${behind.name} no desempate pela rodada ${round.roundNumber} (${round.winnerPoints} contra ${round.otherPoints} pontos). As rodadas mais recentes têm prioridade: ${priority}.`;
+    }
   }
-
-  const leader = snapshots[0];
-  const tiedOnPoints = snapshots.filter(
-    (row) => row.totalPoints === leader.totalPoints
-  );
-  if (tiedOnPoints.length < 2) {
-    return null;
-  }
-
-  const coChampions = tiedOnPoints.filter((row) =>
-    rankingSnapshotsAreTied(row, leader)
-  );
-
-  if (coChampions.length >= 2) {
-    const names = formatNameListPt(coChampions.map((row) => row.name));
-    const pointsWord = leader.totalPoints === 1 ? 'ponto' : 'pontos';
-    const mesasWord =
-      leader.tableWinCount === 1
-        ? mesasComCincoPontosLabel(1)
-        : mesasComCincoPontosLabel(leader.tableWinCount);
-    return `${names} empataram no campeonato com ${leader.totalPoints} ${pointsWord} no total, ${mesasWord} cada e o mesmo resultado em todas as rodadas.`;
-  }
-
-  const runnerUp = tiedOnPoints.find(
-    (row) => !rankingSnapshotsAreTied(row, leader)
-  );
-  if (!runnerUp) {
-    return null;
-  }
-
-  const pointsWord = leader.totalPoints === 1 ? 'ponto' : 'pontos';
-
-  if (leader.tableWinCount !== runnerUp.tableWinCount) {
-    const diff = leader.tableWinCount - runnerUp.tableWinCount;
-    const mesaWord = diff === 1 ? 'mesa' : 'mesas';
-    return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name}: ambos terminaram com ${leader.totalPoints} ${pointsWord}, mas ${leader.name} venceu ${diff} ${mesaWord} com 5 pontos a mais (${mesasComCincoPontosLabel(leader.tableWinCount)} contra ${mesasComCincoPontosLabel(runnerUp.tableWinCount)}).`;
-  }
-
-  const roundDiff = findDecisiveRoundDifference(leader, runnerUp);
-  if (roundDiff) {
-    const pointDiff = roundDiff.winnerPoints - roundDiff.otherPoints;
-    const pointWord = pointDiff === 1 ? 'ponto' : 'pontos';
-    return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name}: ambos terminaram com ${leader.totalPoints} ${pointsWord} e ${mesasComCincoPontosLabel(leader.tableWinCount)}, mas ${leader.name} fez ${pointDiff} ${pointWord} a mais na rodada ${roundDiff.roundNumber} (${roundDiff.winnerPoints} contra ${roundDiff.otherPoints}).`;
-  }
-
-  return `${leader.name} ficou em 1º no desempate contra ${runnerUp.name} com ${leader.totalPoints} ${pointsWord} no total.`;
+  return null;
 }
 
 export function doublesTeamStatsAreTied(

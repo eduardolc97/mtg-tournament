@@ -7,6 +7,9 @@ import {
   doublesTeamStatsAreTied,
   formatTournamentRankingMessage,
   playerStatsAreTied,
+  describeRankingTiebreak,
+  playerStatsToSnapshot,
+  doublesTeamStatsToSnapshot,
 } from '../../utils/tournamentRanking';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import {
@@ -41,6 +44,9 @@ export default function RankingTab({ tournament }: RankingTabProps) {
   }, [tournament.rounds]);
 
   const displayStats = doubles ? teamStats : stats;
+  const tiebreakMessage = describeRankingTiebreak(doubles
+    ? teamStats.map(doublesTeamStatsToSnapshot)
+    : stats.map(playerStatsToSnapshot));
   const leader = displayStats[0];
   const empty =
     displayStats.length === 0 ||
@@ -125,6 +131,9 @@ export default function RankingTab({ tournament }: RankingTabProps) {
         </div>
       </CardHeader>
       <CardContent className="p-0">
+        {tiebreakMessage && (
+          <p className="px-4 py-3 text-sm text-slate-300">{tiebreakMessage}</p>
+        )}
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
