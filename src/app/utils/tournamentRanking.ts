@@ -19,7 +19,11 @@ function countFivePointTablesByPlayerId(
         continue;
       }
       for (const r of table.results) {
-        if (r.points !== TABLE_FIRST_PLACE_POINTS) {
+        const isFirstPlace =
+          r.outcome.type === 'points'
+            ? r.outcome.value === 4
+            : r.points === TABLE_FIRST_PLACE_POINTS;
+        if (!isFirstPlace) {
           continue;
         }
         counts.set(r.playerId, (counts.get(r.playerId) ?? 0) + 1);

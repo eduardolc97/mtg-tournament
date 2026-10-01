@@ -13,7 +13,8 @@ export interface Player {
 
 export type TableOutcome =
   | { type: 'place'; place: 1 | 2 | 3 | 4 }
-  | { type: 'tie' };
+  | { type: 'tie' }
+  | { type: 'points'; value: 0 | 1 | 2 | 3 | 4 };
 
 export interface TableResult {
   playerId: string;
