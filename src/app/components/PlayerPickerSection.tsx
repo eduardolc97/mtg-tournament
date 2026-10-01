@@ -202,9 +202,8 @@ export default function PlayerPickerSection({
   };
 
   const addExistingPlayer = async (profile: PlayerProfile) => {
-    const requireFullName = !profile.fullName?.trim();
-    if (showPauperFields || requireFullName) {
-      openPlayerDialog(profile.nickname, profile, requireFullName);
+    if (showPauperFields) {
+      openPlayerDialog(profile.nickname, profile, !profile.fullName?.trim());
       return;
     }
     setSuggestOpen(false);
@@ -249,9 +248,7 @@ export default function PlayerPickerSection({
         );
       });
 
-      if (!pendingExisting || !editOnly) {
-        await onAddFromProfile(profile, data.pauperRecord);
-      }
+      await onAddFromProfile(profile, data.pauperRecord);
       setPlayerName('');
       setSuggestOpen(false);
       setRequireFullName(false);
@@ -382,7 +379,7 @@ export default function PlayerPickerSection({
   const pickerDescription = showPauperFields
     ? 'Digite o apelido ou escolha da lista — o popup abre para confirmar cadastro e resultado Pauper.'
     : useBulkNameImport
-      ? 'Cole os nomes antes de começar; cada jogador será revisado antes de ser adicionado.'
+      ? 'Adicione jogadores pela busca ou cole uma lista para revisar antes de adicionar.'
       : description;
 
   return (
@@ -417,8 +414,7 @@ export default function PlayerPickerSection({
         </p>
       )}
 
-      {!useBulkNameImport ? (
-        <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3">
           <div
             ref={suggestContainerRef}
             className="relative flex-1 min-w-0 w-full"
@@ -429,12 +425,12 @@ export default function PlayerPickerSection({
               disabled={disabled}
               onChange={(e) => {
                 setPlayerName(e.target.value);
-                if (registry.length > 0) {
+                if (!disabled) {
                   setSuggestOpen(true);
                 }
               }}
               onFocus={() => {
-                if (registry.length > 0 && !disabled) {
+                if (!disabled) {
                   setSuggestOpen(true);
                 }
               }}
@@ -527,9 +523,10 @@ export default function PlayerPickerSection({
             <UserPlus className="w-4 h-4 mr-2" />
             Adicionar
           </Button>
-        </div>
-      ) : (
-        <div className="space-y-3">
+      </div>
+
+      {useBulkNameImport && (
+        <div className="mt-6 space-y-3 border-t border-slate-700 pt-5">
           <label
             htmlFor="bulk-player-names"
             className="text-sm font-medium text-slate-300"

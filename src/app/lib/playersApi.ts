@@ -73,10 +73,11 @@ export async function fetchPlayers(): Promise<PlayerProfile[]> {
     return [];
   }
   if (aliasesResult.error) {
-    if (isMissingAliasTable(aliasesResult.error.message)) {
-      return (playersResult.data as PlayerRow[]).map((row) => rowToProfile(row));
-    }
-    throw new Error(formatPlayerError(aliasesResult.error.message));
+    console.warn(
+      'Could not load player aliases; continuing with registered nicknames.',
+      formatPlayerError(aliasesResult.error.message)
+    );
+    return (playersResult.data as PlayerRow[]).map((row) => rowToProfile(row));
   }
 
   const aliasesByPlayer = new Map<string, string[]>();
