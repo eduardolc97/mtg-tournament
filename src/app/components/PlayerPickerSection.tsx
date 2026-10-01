@@ -248,9 +248,7 @@ export default function PlayerPickerSection({
         );
       });
 
-      if (!pendingExisting || !editOnly) {
-        await onAddFromProfile(profile, data.pauperRecord);
-      }
+      await onAddFromProfile(profile, data.pauperRecord);
       setPlayerName('');
       setSuggestOpen(false);
       setRequireFullName(false);
