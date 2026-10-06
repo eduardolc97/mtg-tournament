@@ -137,4 +137,13 @@ assert.equal(emptyMonth.datesByAttendance.length, 0);
 const weekend = tournament('weekend', '2026-09-05T22:00:00Z', [ana, bia], ana);
 const weekendMonth = aggregateCmd100Analytics([weekend], '2026-09');
 assert.deepEqual(weekendMonth.datesByAttendance.map((row) => row.count), [2]);
+const directPoints = tournament('direct-points', '2026-10-01T22:00:00Z', [ana, bia]);
+directPoints.rounds.forEach((round) => {
+  round.tables[0].results = [
+    { playerId: ana.id, outcome: { type: 'points', value: 4 }, points: 4 },
+    { playerId: bia.id, outcome: { type: 'points', value: 2 }, points: 2 },
+  ];
+});
+const directPointsAnalytics = aggregateCmd100Analytics([directPoints], '2026-10');
+assert.deepEqual(directPointsAnalytics.playersByTableWins.map((row) => [row.id, row.count]), [['ana', 3]]);
 console.log('CMD100 analytics aggregation passed');

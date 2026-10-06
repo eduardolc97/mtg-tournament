@@ -1,7 +1,7 @@
 import type { Tournament } from '../types/tournament';
 import { calculatePlayerStats, playerStatsAreTied } from './tournamentRanking';
 import { plannedTotalRounds } from '../constants/tournamentModality';
-import { TABLE_FIRST_PLACE_POINTS } from './scoring';
+import { isTableWin } from './scoring';
 
 export interface AnalyticsRow {
   id: string;
@@ -134,10 +134,7 @@ export function aggregateCmd100Analytics(tournaments: Tournament[], monthKey?: s
       for (const table of round.tables) {
         if (!isCompleteTable(table)) continue;
         for (const result of table.results!) {
-          const isFirstPlace =
-            (result.outcome.type === 'place' && result.outcome.place === 1) ||
-            result.points === TABLE_FIRST_PLACE_POINTS;
-          if (!isFirstPlace) continue;
+          if (!isTableWin(result)) continue;
           const playerId = entryToPlayer.get(result.playerId);
           const current = playerId ? players.get(playerId) : undefined;
           if (current) current.tableWins += 1;
