@@ -141,12 +141,13 @@ export default function CreateTournament() {
       }
     }
 
+    const createdAt = new Date();
     const tournament: Tournament = {
-      id: `tournament-${Date.now()}`,
+      id: `tournament-${createdAt.getTime()}`,
       name: tournamentName.trim(),
       players: playersOut,
       rounds,
-      createdAt: new Date(),
+      createdAt,
       leagueYear,
       leagueMonth,
       modality,

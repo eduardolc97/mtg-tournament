@@ -30,7 +30,7 @@ INSERT INTO tournaments (
 VALUES (
   'tournament-junho-1-2026',
   'Junho 1',
-  '2026-06-01T19:00:00.000Z',
+  '2026-06-04T22:00:00.000Z',
   $rounds$
 [
   {
