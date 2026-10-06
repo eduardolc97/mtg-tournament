@@ -19,6 +19,7 @@ export const router = createBrowserRouter([
       { path: 'liga', element: <Navigate to="/liga/cmd100" replace /> },
       { path: 'liga/cmd100', Component: MonthlyLeaguePage },
       { path: 'liga/pauper', Component: PauperLeaguePage },
+      { path: 'analytics', lazy: async () => ({ Component: (await import('./components/Cmd100AnalyticsPage')).default }) },
       { path: '*', Component: NotFound },
     ],
   },
