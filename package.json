@@ -8,6 +8,7 @@
     "test:pairings": "tsx scripts/test-pairings.ts",
     "test:ranking": "tsx scripts/test-ranking.ts",
     "test:standings": "tsx scripts/test-standings-pairing.ts",
+    "test:analytics": "esbuild scripts/test-cmd100-analytics.ts --bundle --platform=node --format=esm --outfile=dist/test-cmd100-analytics.mjs && node dist/test-cmd100-analytics.mjs",
     "dev": "vite",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

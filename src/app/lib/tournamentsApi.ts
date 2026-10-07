@@ -7,6 +7,7 @@ import {
   regenerateSwissRoundsOneAndTwoForTournament,
 } from '../utils/lateJoinPlayer';
 import { stripRoundsForStorage } from '../utils/roundPersistence';
+import { parseStoredUtcTimestamp } from '../utils/tournamentDate';
 import {
   hydrateTournament,
   type ParticipantRow,
@@ -92,7 +93,7 @@ export function parseTournament(
   raw: TournamentWire,
   participants: ParticipantJoinRow[] = []
 ): Tournament {
-  const createdAt = new Date(raw.createdAt);
+  const createdAt = parseStoredUtcTimestamp(raw.createdAt);
   let doublesFourth: boolean | null = null;
   if (raw.doublesIncludeFourthSwissRound === true) {
     doublesFourth = true;
@@ -241,10 +242,9 @@ function wireToInsertRow(w: TournamentWire): TournamentRow {
   };
 }
 
-function wireToUpdateRow(w: TournamentWire): Omit<TournamentRow, 'id'> {
+function wireToUpdateRow(w: TournamentWire): Omit<TournamentRow, 'id' | 'created_at'> {
   return {
     name: w.name,
-    created_at: w.createdAt,
     rounds: w.rounds,
     league_year: w.leagueYear!,
     league_month: w.leagueMonth!,
